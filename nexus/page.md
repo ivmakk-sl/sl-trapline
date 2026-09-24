@@ -4,7 +4,7 @@ Tracks the mod's Nexus page details.
 
 - Mod name: Trapline
 - Game domain: `survivallog` (add-mod page: https://www.nexusmods.com/survivallog/mods/add)
-- Mod id and URL: TBD, not yet published.
+- Mod id and URL: `15`, https://www.nexusmods.com/survivallog/mods/15
 - Category: Miscellaneous. It is the only category the game offers on Nexus.
 - Version: `1.0.0`
 - File name under Manage Files: `Trapline 1.0.0`, the zip `Trapline-1.0.0.zip`, marked as the main file. It is the same zip as the GitHub Release asset.

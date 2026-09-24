@@ -10,6 +10,8 @@ The open trap list is also a compact grid, with one line for each floor. The lin
 
 Trapline does not rebait a trap after collecting it. Rebait by hand, as usual. The mod writes and changes no file of the game install, and it does not change the traps, the prey, or the save format.
 
+Nexus page: https://www.nexusmods.com/survivallog/mods/15
+
 ## Compatibility
 
 Do not install Trapline together with [TrapPickAll](https://www.nexusmods.com/survivallog/mods/6). Both mods change how trap prey is collected. The difference: TrapPickAll replaces the pickup, and Trapline only automates it. Trapline puts the game's normal pickup action in the queue of the character, one for each trap. The walk, the pickup time, and the rewards are the same as when you collect by hand.
