@@ -1,0 +1,35 @@
+Checking every trap by hand means a click on each trap, a walk, and a panel each time. Trapline adds one "Take All" button to the HUD trap list, and turns the open list into a compact grid that shows all your traps, free slots, and prey at a glance.
+
+Fun fact: a [url=https://en.wikipedia.org/wiki/Trapline]trapline[/url] is a route a trapper follows to set and check traps. Now your character has one too.
+
+[size=5]Main features[/size]
+[list]
+[*][b]Take All.[/b] The button shows in the header of the trap list when at least one trap has prey. A click queues the game's normal pickup action for each trap with prey. The character walks to each trap, and each pickup takes its normal time. No instant prey, no extra EXP.[/*]
+[*][b]Short walking route.[/b] The mod plans the order of the traps so the character walks less. It clears your current floor first, then visits other floors in order of distance from the floor you were on when you clicked. On each floor, it goes to the nearest trap next.[/*]
+[*][b]Compact trap grid.[/b] The open trap list shows one line for each floor, with one cell for each trap slot you can use now. A cell shows the trap icon, or it is empty for a free slot. A trap with prey has a gold border and a gold dot. Each trap keeps its cell while the usable slots on that floor stay the same. A click on a trap cell does the same as a click on that trap in the game's list.[/*]
+[*][b]English and Chinese.[/b][/*]
+[/list]
+
+Trapline does not rebait a trap after collecting it. Rebait by hand, as usual.
+
+[size=5]Compatibility[/size]
+Do not install Trapline together with [url=https://www.nexusmods.com/survivallog/mods/6]TrapPickAll[/url]. Both mods change how trap prey is collected. The difference: TrapPickAll replaces the pickup, and Trapline only automates it. Trapline puts the game's normal pickup action in the queue of the character, one for each trap. The walk, the pickup time, and the rewards are the same as when you collect by hand.
+
+[size=5]Requirements[/size]
+[list]
+[*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]. Install it first.[/*]
+[/list]
+
+[size=5]Installation[/size]
+[list=1]
+[*]Install [url=https://www.nexusmods.com/survivallog/mods/12]BepInEx[/url] [i](if no other mods were installed before, start the game once so BepInEx finishes setup, then quit)[/i].[/*]
+[*]Extract this mod's zip into the game folder (the folder with the game .exe). The DLL lands in BepInEx\plugins. Full path example:
+[code]C:\Program Files (x86)\Steam\steamapps\common\Survival Log\BepInEx\plugins\Trapline.dll[/code]
+[/*]
+[/list]
+
+[size=5]Uninstall[/size]
+Delete [font=Courier New]Trapline.dll[/font] from the [font=Courier New]BepInEx\plugins[/font] folder.
+
+[size=5]Source and license[/size]
+Open source under GPL-3.0: [url=https://github.com/ivmakk-sl/sl-trapline]github.com/ivmakk-sl/sl-trapline[/url]

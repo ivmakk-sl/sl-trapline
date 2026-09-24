@@ -1,0 +1,10 @@
+{
+  "name": "trapline-page-tests",
+  "private": true,
+  "scripts": {
+    "test": "node --test --test-force-exit"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1"
+  }
+}

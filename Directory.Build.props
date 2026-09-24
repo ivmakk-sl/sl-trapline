@@ -1,0 +1,53 @@
+<Project>
+
+  <!-- Self-contained build config for the standalone Trapline repo. The mod builds alone,
+       given the game and BepInEx installed. MSBuild finds this file by walking up from src\. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- Reference-version conflicts between the SDK ref pack and BepInEx are expected and harmless for a plugin. -->
+    <NoWarn>CS0436;CS0618;NU1701;MSB3277</NoWarn>
+
+    <!-- Path to the game install. Override without editing this file: set a GameDir
+         environment variable, or pass -p:GameDir=... on the build. -->
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Survival Log</GameDir>
+    <BepInExCore>$(GameDir)\BepInEx\core</BepInExCore>
+    <BepInExInterop>$(GameDir)\BepInEx\interop</BepInExInterop>
+  </PropertyGroup>
+
+  <!-- References every BepInEx IL2CPP plugin for this game needs. HotUpdate.dll has the game code.
+       The csproj adds the assemblies that only this mod uses. -->
+  <ItemGroup>
+    <_SharedRef Include="$(BepInExCore)\*.dll" />
+    <_SharedRef Include="$(BepInExInterop)\HotUpdate.dll" />
+    <_SharedRef Include="$(BepInExInterop)\Il2Cppmscorlib.dll" />
+    <_SharedRef Include="$(BepInExInterop)\Il2CppSystem.dll" />
+    <_SharedRef Include="$(BepInExInterop)\Il2CppSystem.Core.dll" />
+    <_SharedRef Include="$(BepInExInterop)\Il2CppInterop.Runtime.dll" />
+    <_SharedRef Include="$(BepInExInterop)\UnityEngine.CoreModule.dll" />
+    <Reference Include="@(_SharedRef)">
+      <HintPath>%(FullPath)</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Package the ready-to-install zip. Runs only with -p:Package=true, so a plain
+       build stays fast. The zip is laid out as BepInEx\plugins\<Name>.dll, so a user
+       extracts it at the game root. dist\ sits beside this props file and is gitignored. -->
+  <Target Name="PackageMod" AfterTargets="Build" Condition="'$(Package)' == 'true'">
+    <PropertyGroup>
+      <PackageStageDir>$(IntermediateOutputPath)package</PackageStageDir>
+      <PackageZip>$(MSBuildThisFileDirectory)dist\$(AssemblyName)-$(Version).zip</PackageZip>
+    </PropertyGroup>
+    <RemoveDir Directories="$(PackageStageDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PackageStageDir)\BepInEx\plugins" />
+    <MakeDir Directories="$(MSBuildThisFileDirectory)dist" />
+    <Delete Files="$(PackageZip)" />
+    <ZipDirectory SourceDirectory="$(PackageStageDir)" DestinationFile="$(PackageZip)" Overwrite="true" />
+    <RemoveDir Directories="$(PackageStageDir)" />
+    <Message Importance="high" Text="Packaged $(PackageZip)" />
+  </Target>
+
+</Project>

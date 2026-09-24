@@ -1,0 +1,9 @@
+# Build output
+bin/
+obj/
+
+# Package artifacts
+dist/
+
+# Node dependencies of the page test
+tests/page/node_modules/

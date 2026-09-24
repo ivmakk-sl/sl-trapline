@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Build settings and the common game references live in Directory.Build.props at the mod root.
+       This file names the plugin and adds the assemblies that only this mod uses. -->
+  <PropertyGroup>
+    <AssemblyName>Trapline</AssemblyName>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="page.js" />
+  </ItemGroup>
+
+  <!-- The HUD work needs the web view: Vuplex for WebUILayer and its page messages, and R3 for the
+       ReactiveProperty state of State_Web_CoreUI1. -->
+  <ItemGroup>
+    <_Ref Include="$(BepInExInterop)\Vuplex.WebView.dll" />
+    <_Ref Include="$(BepInExInterop)\R3.dll" />
+    <Reference Include="@(_Ref)">
+      <HintPath>%(FullPath)</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

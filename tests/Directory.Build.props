@@ -1,0 +1,8 @@
+<Project>
+
+  <!-- Intentionally empty. This stops the Directory.Build.props walk so test projects under
+       tests\ do NOT import the mod's root Directory.Build.props, which adds the game's IL2CPP references.
+       Those assemblies need the running game and cannot load in a test host. The tests link
+       only RouteLogic.cs and SlotLogic.cs, which have no game dependencies. -->
+
+</Project>
