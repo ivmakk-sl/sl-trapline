@@ -16,7 +16,7 @@
 
   <ItemGroup>
     <PageSource Include="Web\**\*.ts;Web\**\*.js;Web\**\*.css" />
-    <PageSource Include="$(ModRoot)\package-lock.json;$(ModRoot)\vite.config.ts" />
+    <PageSource Include="$(ModRoot)\package.json;$(ModRoot)\package-lock.json;$(ModRoot)\vite.config.ts" />
     <EmbeddedResource Include="$(PageBundle)" LogicalName="Trapline.page.js" />
   </ItemGroup>
 
