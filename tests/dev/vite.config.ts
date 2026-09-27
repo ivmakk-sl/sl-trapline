@@ -26,7 +26,10 @@ function gameWebUi(): Plugin {
       server.middlewares.use((req, res, next) => {
         const urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
         const file = path.join(WEB_UI, urlPath);
-        if (!file.startsWith(WEB_UI) || urlPath === '/' || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+        // Only a file inside the WebUI folder: a path that leaves it (..) is not a game page file.
+        const relative = path.relative(WEB_UI, file);
+        const inside = relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
+        if (!inside || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
           next();
           return;
         }

@@ -144,6 +144,38 @@ public class PushScheduleTests
         Assert.InRange(sends, 5, 6);
     }
 
+    [Fact]
+    public void A_build_that_throws_keeps_the_change_and_builds_again_one_second_later()
+    {
+        var s = new PushSchedule();
+        int calls = 0;
+        string Failing() { calls++; throw new InvalidOperationException("no world"); }
+
+        Assert.Throws<InvalidOperationException>(() => s.Tick(10f, true, Failing));
+        // No new trigger: the change stays pending, and the build waits one real second.
+        Assert.Equal(None, s.Tick(10.5f, false, Failing));
+        Assert.Equal(1, calls);
+        Assert.Throws<InvalidOperationException>(() => s.Tick(11f, false, Failing));
+        Assert.Equal(2, calls);
+
+        var d = new Data();
+        Assert.Equal(Push("{\"a\":1}"), s.Tick(12f, false, d.Build));
+    }
+
+    [Fact]
+    public void A_retry_whose_build_throws_is_kept_for_the_next_second()
+    {
+        var s = new PushSchedule();
+        var d = new Data();
+        s.Tick(10f, true, d.Build);
+        s.ForgetLastPush();
+
+        Assert.Throws<InvalidOperationException>(() => s.Tick(11f, true, () => throw new InvalidOperationException("no world")));
+        Assert.Equal(None, s.Tick(11.5f, false, d.Build));
+        d.Json = "{\"a\":2}";
+        Assert.Equal(Push("{\"a\":2}"), s.Tick(12f, false, d.Build));
+    }
+
     [Theory]
     [InlineData("ok 3 1", true, 3, 1)]
     [InlineData("ok", true, 0, 0)]

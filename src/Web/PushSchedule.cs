@@ -9,6 +9,8 @@ namespace Trapline
     // - With no push for one real second, a check goes.
     // - ForgetLastPush (a push that found no CoreUI1 frame, or a check that is not ok) makes the first tick
     //   one real second after the last send push the data again. It is the only retry: the page has none.
+    // - A build that throws (for example between a save and the title screen) keeps the change pending and
+    //   rethrows to the caller; the next build waits one real second.
     public sealed class PushSchedule
     {
         public enum Kind { None, Push, Check }
@@ -33,8 +35,9 @@ namespace Trapline
         private string lastJson;
         private float lastSendAt = float.NegativeInfinity;
         private bool resend;
-        // A dirty tick that waits for the retry: the retry then builds the data again.
+        // A change that is not built yet: it waits for the retry, or its build threw. The next build takes it.
         private bool pendingDirty;
+        private float nextBuildAt = float.NegativeInfinity;
 
         private float observerWindowStart = float.NaN;
         private int observerRuns;
@@ -44,24 +47,24 @@ namespace Trapline
         {
             pendingDirty |= dirty;
             bool due = now - lastSendAt >= IntervalSeconds;
+            bool canBuild = now >= nextBuildAt;
 
             if (resend)
             {
                 if (!due) return new Step(Kind.None, null);
                 if (pendingDirty || lastJson == null)
                 {
-                    pendingDirty = false;
-                    lastJson = build();
+                    if (!canBuild) return new Step(Kind.None, null);
+                    lastJson = Build(now, build);
                 }
                 resend = false;
                 lastSendAt = now;
                 return new Step(Kind.Push, lastJson);
             }
 
-            if (pendingDirty)
+            if (pendingDirty && canBuild)
             {
-                pendingDirty = false;
-                string json = build();
+                string json = Build(now, build);
                 if (json != lastJson)
                 {
                     lastJson = json;
@@ -76,6 +79,22 @@ namespace Trapline
                 return new Step(Kind.Check, null);
             }
             return new Step(Kind.None, null);
+        }
+
+        // Builds the data. The change stays pending until a build succeeds.
+        private string Build(float now, Func<string> build)
+        {
+            try
+            {
+                string json = build();
+                pendingDirty = false;
+                return json;
+            }
+            catch
+            {
+                nextBuildAt = now + IntervalSeconds;
+                throw;
+            }
         }
 
         // The last JSON (kept) is sent again by the first tick one real second after the last send.

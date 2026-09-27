@@ -41,19 +41,27 @@ namespace Trapline
             MarkDirty();
         }
 
+        private static readonly HashSet<string> warned = new HashSet<string>();
+
+        // Runs on each frame from FramePatch, so nothing here may throw into the game's ActionManager.Update.
+        // A failed build keeps its change in PushSchedule, and a failed send sends again one real second
+        // later. Each distinct warning logs once, because a failure can repeat each second.
         internal static void Tick()
         {
             bool wasDirty = dirty;
             dirty = false;
-            PushSchedule.Step step;
-            try { step = schedule.Tick(Time.realtimeSinceStartup, wasDirty, Build); }
+            try
+            {
+                var step = schedule.Tick(Time.realtimeSinceStartup, wasDirty, Build);
+                if (step.Kind == PushSchedule.Kind.Push) PageScript.SetData(step.Json, summary);
+                else if (step.Kind == PushSchedule.Kind.Check) PageScript.Check();
+            }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"Trapline: group/word push failed: {e.Message}");
-                return;
+                schedule.ForgetLastPush();
+                string message = $"Trapline: group/word push failed: {e.Message}";
+                if (warned.Add(message)) Plugin.Log.LogWarning(message);
             }
-            if (step.Kind == PushSchedule.Kind.Push) PageScript.SetData(step.Json, summary);
-            else if (step.Kind == PushSchedule.Kind.Check) PageScript.Check();
         }
 
         // The floor name in the current display language. The floor-button JSON also carries
