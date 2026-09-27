@@ -1,0 +1,2 @@
+v1.0.1 - 2026-09-27
+Changed: Trapline sends less repeated data to the HUD when you place or remove traps. The Take All button and trap grid look and work as before.

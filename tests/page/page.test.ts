@@ -1,4 +1,4 @@
-// Runs page.js against the game's own CoreUI1.html, so a game update that renames or removes a page
+// Runs the page script bundle against the game's own CoreUI1.html, so a game update that renames or removes a page
 // part page.js depends on shows up here instead of only in the game.
 //
 // CoreUI1 is a persistent HUD panel (not a pop-up like the event or cooking windows), driven by a plain,
@@ -6,34 +6,41 @@
 // so `iframe.contentWindow.eval('state')` can read it. The root page normally
 // supplies MutationObserver, setTimeout, and the iframe list (it is a real browser window), so this test
 // also loads a small real jsdom window to run page.js in, instead of a bare object stub.
-'use strict';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import url from 'node:url';
+import vm from 'node:vm';
+import { JSDOM } from 'jsdom';
+import { test, type TestContext } from 'vitest';
 
-const { test } = require('node:test');
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const url = require('node:url');
-const vm = require('node:vm');
-const { JSDOM } = require('jsdom');
+// The jsdom windows carry the game's page globals (state, eval) and the test's own frame hook, which
+// have no types.
+type Win = any;
+
+const HERE = path.dirname(url.fileURLToPath(import.meta.url));
 
 const GAME_DIR = process.env.SL_GAME_DIR ||
   'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Survival Log';
 const CORE_UI1_HTML = path.join(GAME_DIR, 'SurvivalLog_Data', 'StreamingAssets', 'WebUI', 'UI', 'CoreUI1', 'CoreUI1.html');
-const PAGE_JS_PATH = path.join(__dirname, '..', '..', 'src', 'page.js');
+// The bundle that Vite builds from src/Web/page/ (npm test builds it first).
+const PAGE_JS_PATH = path.join(HERE, '..', '..', 'obj', 'page', 'page.js');
+// The source file with the FEATURES table, in the quotes that the static test parses.
+const FEATURES_PATH = path.join(HERE, '..', '..', 'src', 'Web', 'page', 'core.ts');
 
 const gameFileExists = fs.existsSync(CORE_UI1_HTML);
 
 if (!gameFileExists) {
-  test('page.js against the game page', { skip: `game files not found under SL_GAME_DIR (${GAME_DIR}); set SL_GAME_DIR to the game folder` }, () => {});
+  test.skip(`page.js against the game page: game files not found under SL_GAME_DIR (${GAME_DIR}); set SL_GAME_DIR to the game folder`, () => {});
 } else {
   const pageJs = fs.readFileSync(PAGE_JS_PATH, 'utf8');
   const coreUi1Html = fs.readFileSync(CORE_UI1_HTML, 'utf8');
 
-  // Pulls the page part names out of the FEATURES table of page.js, so this test never copies the names.
-  function featureNames() {
-    const table = pageJs.match(/var FEATURES = \{([\s\S]*?)\};/);
+  // Pulls the page part names out of the FEATURES table of the source, so this test never copies the names.
+  function featureNames(): string[] {
+    const table = fs.readFileSync(FEATURES_PATH, 'utf8').match(/FEATURES = \{([\s\S]*?)\};/);
     assert.ok(table, 'FEATURES table not found in page.js');
-    const names = [];
+    const names: string[] = [];
     const quoted = /'([^']+)'/g;
     let m;
     while ((m = quoted.exec(table[1]))) names.push(m[1]);
@@ -42,7 +49,7 @@ if (!gameFileExists) {
   }
 
   // A '.class' part is a CSS selector; every piece of it (split on '.') must appear as text in the page.
-  function partIsPresent(name) {
+  function partIsPresent(name: string): boolean {
     return name.replace(/^[#.]/, '').split('.').every((piece) => coreUi1Html.includes(piece));
   }
 
@@ -54,19 +61,18 @@ if (!gameFileExists) {
 
   // CoreUI1.html starts its own persistent requestAnimationFrame loops (plant-countdown ticks and the
   // like) as soon as it loads, which would otherwise keep every jsdom window (and so the test process)
-  // alive forever. t.after(...) closes each window once its test is done, which jsdom uses to cancel
-  // those loops, so `node --test` still exits on its own (the --test-force-exit npm script flag is only
-  // a backstop against a page part this file does not yet know to close).
-  async function loadCoreWindow(t) {
+  // alive forever. t.onTestFinished(...) closes each window once its test is done, which jsdom uses to
+  // cancel those loops.
+  async function loadCoreWindow(t: TestContext): Promise<Win> {
     const dom = new JSDOM(coreUi1Html, {
       url: url.pathToFileURL(CORE_UI1_HTML).href,
       runScripts: 'dangerously',
       resources: 'usable',
       pretendToBeVisual: true
     });
-    t.after(() => dom.window.close());
-    await new Promise((resolve, reject) => {
-      dom.window.addEventListener('load', resolve);
+    t.onTestFinished(() => dom.window.close());
+    await new Promise<void>((resolve, reject) => {
+      dom.window.addEventListener('load', () => resolve());
       setTimeout(() => reject(new Error('CoreUI1.html did not fire load within 5s')), 5000);
     });
     return dom.window;
@@ -75,38 +81,49 @@ if (!gameFileExists) {
   // A blank real window to run page.js in, standing in for the root page (Root.html), which is what
   // supplies MutationObserver, setTimeout, and the iframe list in the real game, and is the target of
   // the button's own postMessage ("posts to the root window"). The CoreUI1 iframe is held in a mutable
-  // box so a test can swap it (a fresh iframe on a later install() call), the same way Root.html itself
+  // box so a test can swap it (a fresh iframe on a later setData call), the same way Root.html itself
   // is never recreated between panel reloads.
-  function makeRootWindow(t, coreWindow) {
+  function makeRootWindow(t: TestContext, coreWindow: Win | null): Win {
     const root = new JSDOM('<!doctype html><html><body></body></html>', {
       url: 'file:///Root.html',
       pretendToBeVisual: true
-    }).window;
-    t.after(() => root.close());
+    }).window as Win;
+    t.onTestFinished(() => root.close());
     const frameBox = { current: coreWindow || null };
     const originalQSA = root.document.querySelectorAll.bind(root.document);
-    root.document.querySelectorAll = (selector) =>
+    root.document.querySelectorAll = (selector: string) =>
       selector === 'iframe' ? (frameBox.current ? [{ contentWindow: frameBox.current }] : []) : originalQSA(selector);
     vm.createContext(root);
-    root.__setCoreFrame = (w) => { frameBox.current = w; };
+    root.__setCoreFrame = (w: Win) => { frameBox.current = w; };
     return root;
   }
 
   // vm.runInContext (not root.eval) so the bare "window" identifier page.js relies on resolves to root
   // itself, the same as it does for a real page evaluated in a browser context.
-  function runPageJs(root, callExpr) {
+  function runPageJs(root: Win, callExpr: string): string {
     return vm.runInContext(pageJs + ';' + callExpr, root, { filename: 'page.js' });
   }
 
-  function install(root) { return runPageJs(root, 'window.__trapline.install()'); }
+  // The last data sent to each root window, so install() and setGroups() can send it again the way
+  // C# does: setData is the one call of the page script.
+  const lastData = new WeakMap<object, { words: { takeAll?: string }; groups: unknown }>();
 
-  function wait(win, ms) {
+  function setData(root: Win, data: { words: { takeAll?: string }; groups: unknown }): string {
+    lastData.set(root, data);
+    return runPageJs(root, 'window.__trapline.setData(' + JSON.stringify(data) + ')');
+  }
+
+  // Sends the last data again (no data: the default word and no groups), which applies the features
+  // once, as the next C# push does.
+  function install(root: Win): string { return setData(root, lastData.get(root) || { words: {}, groups: null }); }
+
+  function wait(win: Win, ms: number): Promise<void> {
     return new Promise((resolve) => win.setTimeout(resolve, ms));
   }
 
   // Sends the trap-list message the real reducer sends (WebUI_CoreUI1_TrapMsg), the same shape
   // Reducer_Web_CoreUI1 / WebUI_CoreUI1.UpdateTrapsList builds.
-  async function postTraps(coreWindow, traps, containerActive) {
+  async function postTraps(coreWindow: Win, traps: object[], containerActive?: boolean): Promise<void> {
     coreWindow.postMessage({
       type: 'WebUI_CoreUI1_TrapMsg',
       data: { containerActive: containerActive !== false, traps }
@@ -114,11 +131,11 @@ if (!gameFileExists) {
     await wait(coreWindow, 30);
   }
 
-  function trap(id, status, roomName) {
+  function trap(id: number, status: number, roomName?: string) {
     return { trapInstanceId: id, trapName: 'Snare', roomName: roomName || '', iconUrl: '', status };
   }
 
-  test('jsdom: a status-1 trap shows the "Collect all" button, styled before the chevron', async (t) => {
+  test('jsdom: a status-1 trap shows the Take All button, styled before the chevron', async (t) => {
     const coreWindow = await loadCoreWindow(t);
     await postTraps(coreWindow, [trap(1, 1)]);
     const root = makeRootWindow(t, coreWindow);
@@ -127,9 +144,9 @@ if (!gameFileExists) {
     assert.equal(result, 'installed', `install result was "${result}"`);
 
     const row = coreWindow.document.querySelector('.trap-toggle-row');
-    const btn = row.querySelector('.trapline-collect-btn');
-    assert.ok(btn, 'the "Collect all" button was not added to the header row');
-    assert.equal(btn.textContent, 'Collect all');
+    const btn = row.querySelector('.trapline-take-all');
+    assert.ok(btn, 'the Take All button was not added to the header row');
+    assert.equal(btn.textContent, 'Take All');
     assert.ok(btn.nextElementSibling.classList.contains('trap-toggle-chevron'), 'the button must sit right before the chevron');
   });
 
@@ -143,19 +160,19 @@ if (!gameFileExists) {
 
     const row = coreWindow.document.querySelector('.trap-toggle-row');
     assert.ok(row, 'the header row should still render (traps exist, just none with prey)');
-    assert.equal(row.querySelector('.trapline-collect-btn'), null, 'a button appeared with no trap having prey');
+    assert.equal(row.querySelector('.trapline-take-all'), null, 'a button appeared with no trap having prey');
   });
 
-  test('jsdom: a click posts TRAPLINE_COLLECT_ALL to the root window and does not toggle the list', async (t) => {
+  test('jsdom: a click posts TRAPLINE_TAKE_ALL to the root window and does not toggle the list', async (t) => {
     const coreWindow = await loadCoreWindow(t);
     await postTraps(coreWindow, [trap(1, 1)]);
     const root = makeRootWindow(t, coreWindow);
     install(root);
 
-    const received = [];
-    root.addEventListener('message', (e) => received.push(e.data));
+    const received: Win[] = [];
+    root.addEventListener('message', (e: Win) => received.push(e.data));
 
-    const btn = coreWindow.document.querySelector('.trap-toggle-row .trapline-collect-btn');
+    const btn = coreWindow.document.querySelector('.trap-toggle-row .trapline-take-all');
     btn.dispatchEvent(new coreWindow.MouseEvent('click', { bubbles: true }));
     await wait(root, 30);
 
@@ -163,13 +180,13 @@ if (!gameFileExists) {
     // spread into a plain object of THIS realm before comparing - a strict deepEqual across realms fails
     // on prototype identity alone, even with identical own properties.
     assert.equal(received.length, 1, 'expected exactly one posted message');
-    assert.equal(received[0].type, 'TRAPLINE_COLLECT_ALL');
+    assert.equal(received[0].type, 'TRAPLINE_TAKE_ALL');
     assert.equal(received[0].sourcePageId, 'CoreUI1');
     assert.deepEqual({ ...received[0].data }, {});
     assert.equal(coreWindow.eval('state.trapsExpanded'), false, 'the click must not open the trap list');
   });
 
-  test('jsdom: a second install() gives one button, not two', async (t) => {
+  test('jsdom: a second setData gives one button, not two', async (t) => {
     const coreWindow = await loadCoreWindow(t);
     await postTraps(coreWindow, [trap(1, 1)]);
     const root = makeRootWindow(t, coreWindow);
@@ -177,7 +194,7 @@ if (!gameFileExists) {
     assert.equal(install(root), 'installed');
     assert.equal(install(root), 'installed');
 
-    const buttons = coreWindow.document.querySelectorAll('.trap-toggle-row .trapline-collect-btn');
+    const buttons = coreWindow.document.querySelectorAll('.trap-toggle-row .trapline-take-all');
     assert.equal(buttons.length, 1, `expected exactly one button, found ${buttons.length}`);
   });
 
@@ -189,7 +206,7 @@ if (!gameFileExists) {
 
     await postTraps(coreWindow, [trap(1, 1)]);
     assert.equal(install(root), 'installed');
-    assert.ok(coreWindow.document.querySelector('.trap-toggle-row .trapline-collect-btn'), 'the button did not appear on the first trap panel');
+    assert.ok(coreWindow.document.querySelector('.trap-toggle-row .trapline-take-all'), 'the button did not appear on the first trap panel');
 
     // Back to zero traps: Vue's v-if removes the whole .trap-panel (and so the old header row and button).
     await postTraps(coreWindow, []);
@@ -198,7 +215,7 @@ if (!gameFileExists) {
     // A trap again: Vue recreates .trap-panel and .trap-toggle-row from scratch.
     await postTraps(coreWindow, [trap(2, 1)]);
     assert.equal(install(root), 'installed');
-    const btn = coreWindow.document.querySelector('.trap-toggle-row .trapline-collect-btn');
+    const btn = coreWindow.document.querySelector('.trap-toggle-row .trapline-take-all');
     assert.ok(btn, 'the button did not reappear on the recreated trap panel');
   });
 
@@ -212,7 +229,7 @@ if (!gameFileExists) {
     const badge = row.querySelector('.trap-toggle-badge');
     assert.ok(badge, 'the urgent badge should still render');
     assert.equal(badge.textContent, '2');
-    assert.ok(row.querySelector('.trapline-collect-btn'), 'the button should render alongside the badge');
+    assert.ok(row.querySelector('.trapline-take-all'), 'the button should render alongside the badge');
   });
 
   test('jsdom: no "missing" report while the list is collapsed', async (t) => {
@@ -225,30 +242,31 @@ if (!gameFileExists) {
     assert.equal(result, 'installed', `expected no missing-part report while collapsed, got "${result}"`);
   });
 
-  // Sends TRAPLINE-shaped group data through the script's own setGroups() entry point, the same shape
-  // C# pushes: floors in display order, a trap id -> floor id map, and a
-  // trap id -> cell index map.
-  function setGroups(root, data) {
-    return runPageJs(root, 'window.__trapline.setGroups(' + JSON.stringify(data) + ')');
+  // Sends group data through setData with the last word, the same shape C# pushes: floors in display
+  // order, a trap id -> floor id map, and a trap id -> cell index map.
+  function setGroups(root: Win, groups: unknown): string {
+    const words = (lastData.get(root) || {}).words || {};
+    return setData(root, { words, groups });
   }
 
-  function expand(coreWindow) {
+  function expand(coreWindow: Win): Promise<void> {
     coreWindow.eval('state.trapsExpanded = true');
     return wait(coreWindow, 30);
   }
 
-  // The inline grid placement of one node, with spaces removed, as '<row>|<column>'.
-  function place(el) {
-    const v = (p) => el.style.getPropertyValue(p).replace(/\s+/g, '');
-    return v('grid-row') + '|' + v('grid-column');
+  // The grid place of one node, with spaces removed, as '<row>|<column>'. The script sets it as the
+  // custom properties --tl-row and --tl-col, which a rule of page.css reads into grid-row and grid-column.
+  function place(el: Win): string {
+    const v = (p: string) => el.style.getPropertyValue(p).replace(/\s+/g, '');
+    return v('--tl-row') + '|' + v('--tl-col');
   }
 
-  // The inline column template of the popover, spaces normalized.
-  function columns(doc) {
-    return doc.querySelector('.trap-popover').style.getPropertyValue('grid-template-columns').replace(/\s+/g, ' ').replace(/,\s*/g, ', ');
+  // The column template of the popover: page.css reads the cell column count from --tl-cols.
+  function columns(doc: Win): string {
+    return 'max-content repeat(' + doc.querySelector('.trap-popover').style.getPropertyValue('--tl-cols').trim() + ', 22px)';
   }
 
-  function emptyCells(doc, floorId) {
+  function emptyCells(doc: Win, floorId: number): Win[] {
     return [...doc.querySelectorAll('.trapline-empty-cell[data-floor-id="' + floorId + '"]')];
   }
 
@@ -324,7 +342,7 @@ if (!gameFileExists) {
     await expand(coreWindow);
     setGroups(root, TWO_FLOORS);
 
-    // Vue update: drop trap 2 (Basement), add trap 3 (Home), with no further setGroups() call.
+    // Vue update: drop trap 2 (Basement), add trap 3 (Home), with no further group data.
     await postTraps(coreWindow, [trap(1, 0), trap(3, 0)]);
     install(root); // re-applies against the freshly patched rows, as the body observer would
 
@@ -457,8 +475,8 @@ if (!gameFileExists) {
     // back to a listener added on coreWindow. The page also posts its own PAGE_READY /
     // SYNC_INTERACTIVE_RECTS messages on its own schedule, unrelated to this click, so this filters down
     // to the message type the row's click handler sends.
-    const received = [];
-    coreWindow.addEventListener('message', (e) => received.push(e.data));
+    const received: Win[] = [];
+    coreWindow.addEventListener('message', (e: Win) => received.push(e.data));
 
     const row = coreWindow.document.querySelectorAll('.trap-item-row')[0];
     row.dispatchEvent(new coreWindow.MouseEvent('click', { bubbles: true }));
@@ -504,7 +522,7 @@ if (!gameFileExists) {
     assert.equal(place(row), '|', 'no grid placement when a required groups part is missing');
     assert.ok(!popover.classList.contains('trapline-grid'), 'no grid class when a required groups part is missing');
     assert.equal(coreWindow.document.querySelector('.trapline-floor-label'), null, 'no label when a required groups part is missing');
-    assert.ok(coreWindow.document.querySelector('.trap-toggle-row .trapline-collect-btn'), 'the button feature must be unaffected by the groups part going missing');
+    assert.ok(coreWindow.document.querySelector('.trap-toggle-row .trapline-take-all'), 'the button feature must be unaffected by the groups part going missing');
   });
 
   const ONE_FLOOR_THREE = {
@@ -515,7 +533,7 @@ if (!gameFileExists) {
 
   // The rules page.js adds, as one text with spaces removed. jsdom does not lay out a grid, so the look
   // of a cell is checked in this text and the game checks the rest.
-  function styleText(doc) {
+  function styleText(doc: Win): string {
     return doc.getElementById('trapline-style').textContent.replace(/\s+/g, '');
   }
 
@@ -547,7 +565,7 @@ if (!gameFileExists) {
     }
     assert.match(css, /\.trap-popover\.trapline-grid\.trap-item-row:hover\{[^}]*transform:none/, 'no sideways move on hover');
     assert.match(css, /\.trap-popover\.trapline-grid\.trap-item-icon-img\{[^}]*width:18px;height:18px/, 'an 18px icon');
-    assert.match(css, /\.trapline-empty-cell\{[^}]*border:1pxsolidrgba\(255,255,255,0\.15\)[^}]*background:rgba\(0,0,0,0\.3\)/, 'the empty cell look');
+    assert.match(css, /\.trapline-empty-cell\{[^}]*border:1pxsolidvar\(--tl-cell-border\)[^}]*background:var\(--tl-cell-bg\)/, 'the empty cell look');
   });
 
   test('jsdom: only a prey cell has the gold marker', async (t) => {
@@ -561,12 +579,15 @@ if (!gameFileExists) {
 
     const doc = coreWindow.document;
     const css = styleText(doc);
-    assert.match(css, /\.trap-popover\.trapline-grid\.trap-item-row\.is-prey\{[^}]*border-color:rgba\(255,193,7,0\.9\)[^}]*box-shadow:/, 'a gold border and glow on a prey cell');
+    assert.match(css, /\.trap-popover\.trapline-grid\.trap-item-row\.is-prey\{[^}]*border-color:rgb\(fromvar\(--tl-gold\)rgb\/90%\)[^}]*box-shadow:/, 'a gold border and glow on a prey cell');
     assert.match(css, /\.trap-popover\.trapline-grid\.trap-item-row\.is-prey::after\{[^}]*width:5px;height:5px/, 'a gold dot on a prey cell');
 
-    const color = (sel) => coreWindow.getComputedStyle(doc.querySelector(sel)).borderLeftColor;
-    assert.notEqual(color('.trap-item-row.is-prey'), color('.trap-item-row.is-armed'), 'prey and armed cells differ');
-    assert.equal(color('.trap-item-row.is-nobait'), color('.trap-item-row.is-armed'), 'a no-bait cell looks the same as an armed cell');
+    // jsdom computes no color from var() and the relative color syntax, so this checks which game rows
+    // the marker rule selects.
+    const marker = '.trap-popover.trapline-grid .trap-item-row.is-prey';
+    assert.ok(doc.querySelector('.trap-item-row.is-prey').matches(marker), 'the marker rule selects a prey cell');
+    assert.ok(!doc.querySelector('.trap-item-row.is-armed').matches(marker), 'the marker rule does not select an armed cell');
+    assert.ok(!doc.querySelector('.trap-item-row.is-nobait').matches(marker), 'a no-bait cell looks the same as an armed cell');
   });
 
   test('jsdom: an empty cell is a HUD area and a click on it posts nothing', async (t) => {
@@ -580,9 +601,9 @@ if (!gameFileExists) {
     const empty = coreWindow.document.querySelector('.trapline-empty-cell');
     assert.ok(empty.hasAttribute('data-interactive'), 'the HUD must count an empty cell as its own area, or the click goes to the world');
 
-    const inCore = [], inRoot = [];
-    coreWindow.addEventListener('message', (e) => inCore.push(e.data));
-    root.addEventListener('message', (e) => inRoot.push(e.data));
+    const inCore: Win[] = [], inRoot: Win[] = [];
+    coreWindow.addEventListener('message', (e: Win) => inCore.push(e.data));
+    root.addEventListener('message', (e: Win) => inRoot.push(e.data));
     empty.dispatchEvent(new coreWindow.MouseEvent('click', { bubbles: true }));
     await wait(coreWindow, 30);
 
@@ -633,11 +654,11 @@ if (!gameFileExists) {
   });
 
   // Everything the grid adds to the popover, so a test can check that all of it is gone.
-  function assertGridGone(coreWindow) {
+  function assertGridGone(coreWindow: Win): void {
     const doc = coreWindow.document;
     const popover = doc.querySelector('.trap-popover') || doc.querySelector('.trap-item-row').parentNode;
     assert.ok(!popover.classList.contains('trapline-grid'), 'no grid class');
-    assert.equal(popover.style.getPropertyValue('grid-template-columns'), '', 'no inline column template');
+    assert.equal(popover.style.getPropertyValue('--tl-cols'), '', 'no column count');
     for (const row of doc.querySelectorAll('.trap-item-row')) assert.equal(place(row), '|', 'no grid placement on a row');
     assert.equal(doc.querySelector('.trapline-floor-label'), null, 'no label');
     assert.equal(doc.querySelector('.trapline-empty-cell'), null, 'no empty cell');
@@ -684,8 +705,112 @@ if (!gameFileExists) {
 
     const result = install(root);
     assert.match(result, /missing: button\(\.trap-toggle-chevron\)/, `expected a missing-part report, got "${result}"`);
-    assert.equal(coreWindow.document.querySelector('.trapline-collect-btn'), null, 'no button should be added when a required part is missing');
+    assert.equal(coreWindow.document.querySelector('.trapline-take-all'), null, 'no button should be added when a required part is missing');
     // The row itself (and the rest of the page) is unaffected by the missing chevron.
     assert.ok(coreWindow.document.querySelector('.trap-toggle-row'), 'the header row itself should be untouched');
+  });
+
+  function check(root: Win): string {
+    return runPageJs(root, 'window.__trapline.check()');
+  }
+
+  // The runs of the observer and the apply passes that check() reports.
+  function counts(result: string): { runs: number; passes: number } {
+    const m = /^ok (\d+) (\d+)$/.exec(result);
+    assert.ok(m, `expected "ok <runs> <passes>", got "${result}"`);
+    return { runs: Number(m[1]), passes: Number(m[2]) };
+  }
+
+  test('jsdom: setData shows the word and the groups in one apply pass', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 1), trap(2, 0), trap(3, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+    await expand(coreWindow);
+
+    const result = setData(root, { words: { takeAll: 'Take All' }, groups: TWO_FLOORS });
+    assert.equal(result, 'installed', `setData result was "${result}"`);
+    assert.equal(counts(check(root)).passes, 1, 'one setData is one apply pass');
+
+    const doc = coreWindow.document;
+    assert.equal(doc.querySelector('.trap-toggle-row .trapline-take-all').textContent, 'Take All');
+    assert.ok(doc.querySelector('.trap-popover').classList.contains('trapline-grid'));
+    assert.equal(place(doc.querySelectorAll('.trap-item-row')[1]), '2|3');
+  });
+
+  test('jsdom: setData with no CoreUI1 frame schedules no retry', async (t) => {
+    const root = makeRootWindow(t, null);
+    let timers = 0;
+    const realSetTimeout = root.setTimeout;
+    root.setTimeout = (...args: unknown[]) => { timers++; return realSetTimeout(...args); };
+
+    const result = setData(root, { words: { takeAll: 'Take All' }, groups: TWO_FLOORS });
+    assert.equal(result, 'no CoreUI1 frame');
+    assert.equal(timers, 0, 'the page has no retry loop: C# retries');
+  });
+
+  test('jsdom: check() reports the observer runs and the passes since the last check', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 1)]);
+    const root = makeRootWindow(t, coreWindow);
+    setData(root, { words: { takeAll: 'Take All' }, groups: null });
+    setData(root, { words: { takeAll: 'Take All' }, groups: null });
+
+    const first = counts(check(root));
+    assert.equal(first.passes, 2);
+
+    // A Vue update in the frame makes the observer run.
+    await postTraps(coreWindow, [trap(1, 1), trap(2, 1)]);
+    const second = counts(check(root));
+    assert.equal(second.passes, 0, 'the counts start again after each check');
+    assert.ok(second.runs >= 1, `expected an observer run after a Vue update, got ${second.runs}`);
+  });
+
+  test('jsdom: check() is not ok while the frame has no observer', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    const root = makeRootWindow(t, coreWindow);
+    const result = check(root);
+    assert.ok(!result.startsWith('ok'), `expected a result that is not ok, got "${result}"`);
+  });
+
+  test('jsdom: check() with no CoreUI1 frame is not ok', async (t) => {
+    const root = makeRootWindow(t, null);
+    assert.equal(check(root), 'no CoreUI1 frame');
+  });
+
+  const CSS_DIR = path.join(HERE, '..', '..', 'src', 'Web');
+
+  test('jsdom: the style node holds the tokens of tokens.css and the rules of page.css', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 1)]);
+    const root = makeRootWindow(t, coreWindow);
+    install(root);
+
+    const css = styleText(coreWindow.document);
+    const tokens = fs.readFileSync(path.join(CSS_DIR, 'tokens.css'), 'utf8');
+    const rules = fs.readFileSync(path.join(CSS_DIR, 'page.css'), 'utf8');
+    const names = [...tokens.matchAll(/(--tl-[\w-]+)\s*:/g)].map((m) => m[1]);
+    assert.ok(names.length > 0, 'tokens.css defines --tl- tokens');
+    for (const name of names) assert.ok(css.includes(name + ':'), `the style node defines ${name}`);
+    const selectors = [...rules.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{/g)].map((m) => m[1].replace(/\s+/g, ''));
+    assert.ok(selectors.length > 0, 'page.css has rules');
+    for (const sel of selectors) assert.ok(css.includes(sel + '{'), `the style node has the rule ${sel}`);
+  });
+
+  test('jsdom: a game node with its own grid place keeps it after the grid turns off', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 0, 'Balcony'), trap(2, 0), trap(3, 0)]);
+    const doc = coreWindow.document;
+    const gameNode = doc.createElement('div');
+    gameNode.style.setProperty('grid-row', '3');
+    gameNode.style.setProperty('grid-column', '2');
+    doc.body.appendChild(gameNode);
+    const root = makeRootWindow(t, coreWindow);
+    await expand(coreWindow);
+    setGroups(root, TWO_FLOORS);
+
+    setGroups(root, null);
+    assertGridGone(coreWindow);
+    assert.equal(gameNode.style.getPropertyValue('grid-row'), '3', 'the game node keeps its grid-row');
+    assert.equal(gameNode.style.getPropertyValue('grid-column'), '2', 'the game node keeps its grid-column');
   });
 }

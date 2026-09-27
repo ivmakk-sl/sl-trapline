@@ -1,0 +1,100 @@
+/* The rules of the page script in the CoreUI1 frame: the Take All button in the header row of the HUD
+   trap list, and the trap grid in the expanded list. The script sets the place of each cell and the
+   column count as the custom properties --tl-row, --tl-col, and --tl-cols; these rules read them. */
+
+.trapline-take-all {
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--tl-white);
+  background: rgb(from var(--tl-gold) r g b / 18%);
+  border: 1px solid rgb(from var(--tl-gold) r g b / 50%);
+  border-radius: 3px;
+  padding: 1px 6px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.trapline-take-all:hover {
+  background: rgb(from var(--tl-gold) r g b / 32%);
+}
+
+/* The floor name in column 1 of its first line. */
+.trapline-floor-label {
+  grid-row: var(--tl-row);
+  grid-column: var(--tl-col);
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: bold;
+  color: rgb(from var(--tl-gold) r g b / 85%);
+  text-shadow: var(--tl-text-shadow);
+  letter-spacing: 0.3px;
+  padding: 3px 2px 1px;
+  white-space: nowrap;
+}
+
+/* The popover as wide as its content: the label column, then at most 6 cell columns of 22px. */
+.trap-popover.trapline-grid {
+  display: grid;
+  grid-template-columns: max-content repeat(var(--tl-cols, 6), 22px);
+  gap: 3px;
+  max-width: none;
+  align-items: center;
+}
+
+/* A cell shows only the trap icon. */
+.trap-popover.trapline-grid .trap-item-name,
+.trap-popover.trapline-grid .trap-item-room,
+.trap-popover.trapline-grid .trap-item-status {
+  display: none;
+}
+
+.trap-popover.trapline-grid .trap-item-row {
+  grid-row: var(--tl-row);
+  grid-column: var(--tl-col);
+  width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  padding: 0;
+  gap: 0;
+  justify-content: center;
+  border: 1px solid var(--tl-cell-border);
+}
+
+.trap-popover.trapline-grid .trap-item-row:hover {
+  transform: none;
+}
+
+.trap-popover.trapline-grid .trap-item-icon-img {
+  width: 18px;
+  height: 18px;
+}
+
+/* A trap with prey: a gold frame, a glow, and a gold dot at the top right. */
+.trap-popover.trapline-grid .trap-item-row.is-prey {
+  border-color: rgb(from var(--tl-gold) r g b / 90%);
+  box-shadow: 0 0 5px rgb(from var(--tl-gold) r g b / 60%);
+}
+
+.trap-popover.trapline-grid .trap-item-row.is-prey::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgb(from var(--tl-gold) r g b / 95%);
+}
+
+/* A usable slot with no trap. */
+.trapline-empty-cell {
+  grid-row: var(--tl-row);
+  grid-column: var(--tl-col);
+  width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  border: 1px solid var(--tl-cell-border);
+  border-radius: 4px;
+  background: var(--tl-cell-bg);
+}

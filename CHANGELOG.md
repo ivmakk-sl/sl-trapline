@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-27
+
+### Changed
+
+- Trapline sends less repeated data to the HUD when you place or remove traps. The Take All button and trap grid look and work as before.
+
 ## [1.0.0] - 2026-09-24
 
 ### Added

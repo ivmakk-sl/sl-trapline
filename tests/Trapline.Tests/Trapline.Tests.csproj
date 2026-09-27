@@ -5,17 +5,21 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\..\src\RouteLogic.cs" Link="RouteLogic.cs" />
-    <Compile Include="..\..\src\SlotLogic.cs" Link="SlotLogic.cs" />
+    <Compile Include="..\..\src\TakeAll\RouteLogic.cs" Link="RouteLogic.cs" />
+    <Compile Include="..\..\src\Grid\GridLogic.cs" Link="GridLogic.cs" />
+    <Compile Include="..\..\src\Web\PageJson.cs" Link="PageJson.cs" />
+    <Compile Include="..\..\src\Web\PushSchedule.cs" Link="PushSchedule.cs" />
+    <None Include="..\fixtures\*.json" Link="fixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
-    <PackageReference Include="xunit" Version="2.9.2" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="xunit.v3" Version="4.0.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0" />
   </ItemGroup>
 
 </Project>
