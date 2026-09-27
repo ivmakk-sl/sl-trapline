@@ -1,0 +1,13 @@
+/* The colors and shared looks of Trapline, once. The page script puts this file before page.css in the
+   CoreUI1 frame. A rule uses a token, never a raw color (stylelint checks it); an opacity stays at the
+   rule, through the relative color syntax: rgb(from var(--tl-gold) r g b / 50%). */
+:root {
+  --tl-white: #fff;
+  --tl-black: #000;
+  --tl-gold: #ffc107;
+
+  /* The frame and the background of a cell of the trap grid. */
+  --tl-cell-border: rgb(from var(--tl-white) r g b / 15%);
+  --tl-cell-bg: rgb(from var(--tl-black) r g b / 30%);
+  --tl-text-shadow: 1px 1px 2px var(--tl-black);
+}

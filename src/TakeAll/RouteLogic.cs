@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace Trapline
 {
     // Game-free logic. This file must not use any game or BepInEx type, because the unit tests compile it alone.
-    // Builds the collect-all route: the order in which the character visits traps that have prey.
+    // Builds the Take All route: the order in which the character visits traps that have prey.
     public static class RouteLogic
     {
         // One trap with prey, read from the game. Floor and position come from the caller.
@@ -95,7 +95,7 @@ namespace Trapline
         }
     }
 
-    // The in-memory state of one collect-all route, for the full-bag stop.
+    // The in-memory state of one Take All route, for the full-bag stop.
     // Holds the trap ids that were queued and are not done yet, in order.
     public sealed class RouteState
     {

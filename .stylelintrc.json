@@ -1,0 +1,15 @@
+{
+  "extends": "stylelint-config-recommended",
+  "rules": {
+    "declaration-property-value-no-unknown": true,
+    "color-named": "never",
+    "declaration-property-value-disallowed-list": [
+      {
+        "/^(?!--)/": ["/#[0-9a-fA-F]{3,8}\\b/", "/\\b(rgba?|hsla?)\\(\\s*[\\d.]/"]
+      },
+      {
+        "message": "Use a --tl-* token of tokens.css (or of the :root block of the file) for a color."
+      }
+    ]
+  }
+}

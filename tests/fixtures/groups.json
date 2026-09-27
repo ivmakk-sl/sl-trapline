@@ -1,0 +1,8 @@
+{
+  "floors": [
+    { "id": 1, "label": "Home", "traps": 3, "slots": 3 },
+    { "id": 101, "label": "The \"Cellar\"", "traps": 1, "slots": 2 }
+  ],
+  "trapFloor": { "11": 1, "12": 101, "13": 1, "14": 1 },
+  "trapCell": { "11": 0, "12": 1, "13": 2 }
+}

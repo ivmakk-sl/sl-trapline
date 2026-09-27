@@ -36,27 +36,32 @@ Delete `Trapline.dll` from the `BepInEx\plugins` folder. The HUD trap list looks
 
 ## Build
 
-This is a BepInEx 6 IL2CPP plugin. It compiles against the game's IL2CPP interop assemblies, so a game install with BepInEx set up and started once is required. Those assemblies are game-derived and are not part of this repo. The .NET 8 SDK is required.
+This is a BepInEx 6 IL2CPP plugin. It compiles against the game's IL2CPP interop assemblies, so a game install with BepInEx set up and started once is required. Those assemblies are game-derived and are not part of this repo. The build needs the .NET 8 SDK and Node 22: the page script in the HUD is TypeScript under `src/Web/page/`, which Vite builds into one file that the DLL embeds. With [mise](https://mise.jdx.dev), `mise.toml` gives Node 22 (run `mise trust` once after a clone). Install the npm packages of the lock file once, then build:
 
 ```
+npm ci
 dotnet build src/Trapline.csproj -c Release
 ```
 
+The build runs the Vite build itself when a page file changed, and it stops with a clear message when the npm packages are missing.
+
 `Directory.Build.props` sets `GameDir` to the default Steam install path. If the game is in another place, override it without an edit of the file: set a `GameDir` environment variable, or pass `-p:GameDir=...` on the build. The output DLL is at `src\bin\Release\Trapline.dll`.
 
-The route order and the floor slot layout are game-free code (`src/RouteLogic.cs`, `src/SlotLogic.cs`) with unit tests. The tests do not need the game:
+The route order, the floor slot layout, the data that goes to the page, and the schedule of the sends are game-free code (`src/TakeAll/RouteLogic.cs`, `src/Grid/GridLogic.cs`, `src/Web/PageJson.cs`, `src/Web/PushSchedule.cs`) with unit tests. The tests do not need the game:
 
 ```
 dotnet test tests/Trapline.Tests
 ```
 
-The page script `src/page.js` has its own test, which runs it against the real `CoreUI1.html` of the installed game (Node with jsdom). Run it after a game update. It needs the game install, and `SL_GAME_DIR` overrides the default Steam path:
+The page script has its own tests, which run the built script against the real `CoreUI1.html` of the installed game (Vitest with jsdom). Run them after a game update. They need the game install, and `SL_GAME_DIR` overrides the default Steam path. The other checks of the page code are the CSS lint and the type check:
 
 ```
-cd tests/page
-npm install
 npm test
+npm run lint
+npm run typecheck
 ```
+
+`npm run dev` starts a dev page that shows the game's HUD with the page script and a few fake traps in a normal browser, and reloads it after each change of a page file. It is for look and layout work. The game is the place to verify a change.
 
 ## Package
 

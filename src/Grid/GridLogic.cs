@@ -1,10 +1,11 @@
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Trapline
 {
     // Game-free logic. This file must not use any game or BepInEx type, because the unit tests compile it alone.
     // Lays out placed traps and usable trap slots per floor, for the HUD grid. Does not use RouteLogic.
-    public static class SlotLogic
+    public static class GridLogic
     {
         // One trap slot, read from the game.
         public sealed class Slot
@@ -77,6 +78,22 @@ namespace Trapline
             result.AddRange(extra);
 
             return result;
+        }
+
+        // Only "id" is read out of the floor-button JSON of the game (State_Web_CoreUI1.FloorButtonsJson);
+        // it and the array order are the one thing nothing else gives. The JSON's own "name" field is not
+        // used - see TrapGroups.FloorLabel.
+        private static readonly Regex FloorIdPattern = new Regex("\"id\":(-?\\d+)", RegexOptions.Compiled);
+
+        // The floor ids of the floor switcher in its button order, each id once.
+        public static List<int> ParseFloorButtonIds(string json)
+        {
+            var ids = new List<int>();
+            if (string.IsNullOrEmpty(json)) return ids;
+            foreach (Match m in FloorIdPattern.Matches(json))
+                if (int.TryParse(m.Groups[1].Value, out int id) && !ids.Contains(id))
+                    ids.Add(id);
+            return ids;
         }
     }
 }

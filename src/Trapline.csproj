@@ -4,12 +4,26 @@
        This file names the plugin and adds the assemblies that only this mod uses. -->
   <PropertyGroup>
     <AssemblyName>Trapline</AssemblyName>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
+  </PropertyGroup>
+
+  <!-- The page script is built from src/Web/ by Vite (package.json at the mod root) into one file,
+       which the plugin embeds under one name. The build runs only when a page source changed. -->
+  <PropertyGroup>
+    <ModRoot>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))</ModRoot>
+    <PageBundle>$(ModRoot)\obj\page\page.js</PageBundle>
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="page.js" />
+    <PageSource Include="Web\**\*.ts;Web\**\*.js;Web\**\*.css" />
+    <PageSource Include="$(ModRoot)\package-lock.json;$(ModRoot)\vite.config.ts" />
+    <EmbeddedResource Include="$(PageBundle)" LogicalName="Trapline.page.js" />
   </ItemGroup>
+
+  <Target Name="BuildPage" BeforeTargets="BeforeBuild" Inputs="@(PageSource)" Outputs="$(PageBundle)">
+    <Error Condition="!Exists('$(ModRoot)\node_modules')" Text="Trapline: the npm packages are missing. Run npm ci in $(ModRoot) first." />
+    <Exec Command="npm run build" WorkingDirectory="$(ModRoot)" />
+  </Target>
 
   <!-- The HUD work needs the web view: Vuplex for WebUILayer and its page messages, and R3 for the
        ReactiveProperty state of State_Web_CoreUI1. -->
