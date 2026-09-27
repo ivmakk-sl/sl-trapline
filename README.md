@@ -36,24 +36,36 @@ Delete `Trapline.dll` from the `BepInEx\plugins` folder. The HUD trap list looks
 
 ## Build
 
-This is a BepInEx 6 IL2CPP plugin. It compiles against the game's IL2CPP interop assemblies, so a game install with BepInEx set up and started once is required. Those assemblies are game-derived and are not part of this repo. The build needs the .NET 8 SDK and Node 22: the page script in the HUD is TypeScript under `src/Web/page/`, which Vite builds into one file that the DLL embeds. With [mise](https://mise.jdx.dev), `mise.toml` gives Node 22 (run `mise trust` once after a clone). Install the npm packages of the lock file once, then build:
+This is a BepInEx 6 IL2CPP plugin. It compiles against the game's IL2CPP interop assemblies. The build needs an installed copy of the game with BepInEx. Start the game once with BepInEx to generate the assemblies. This repo does not include those assemblies.
 
-```
-npm ci
-dotnet build src/Trapline.csproj -c Release
-```
+The build needs the .NET 8 SDK and Node 22. The HUD script uses TypeScript in `src/Web/page/`. Vite builds it into one file, which the DLL embeds. For [mise](https://mise.jdx.dev) users, `mise.toml` specifies Node 22.
 
-The build runs the Vite build itself when a page file changed, and it stops with a clear message when the npm packages are missing.
+Run these commands from the mod root:
 
-`Directory.Build.props` sets `GameDir` to the default Steam install path. If the game is in another place, override it without an edit of the file: set a `GameDir` environment variable, or pass `-p:GameDir=...` on the build. The output DLL is at `src\bin\Release\Trapline.dll`.
+1. If you use mise, run `mise trust` once after cloning the repo.
+2. Install the npm packages from the lock file with `npm ci`.
+3. Build the mod with `dotnet build src/Trapline.csproj -c Release`.
 
-The route order, the floor slot layout, the data that goes to the page, and the schedule of the sends are game-free code (`src/TakeAll/RouteLogic.cs`, `src/Grid/GridLogic.cs`, `src/Web/PageJson.cs`, `src/Web/PushSchedule.cs`) with unit tests. The tests do not need the game:
+The build runs Vite when a page source file changes. If the npm packages are missing, the build stops with a message that explains how to install them.
+
+`Directory.Build.props` sets `GameDir` to the default Steam install path. For another location, set the `GameDir` environment variable or pass `-p:GameDir=...` to the build command. The output DLL is at `src\bin\Release\Trapline.dll`.
+
+These source files contain logic that does not need the game:
+
+- `src/TakeAll/RouteLogic.cs` calculates the route order.
+- `src/Grid/GridLogic.cs` calculates the floor slot layout.
+- `src/Web/PageJson.cs` prepares data for the web page.
+- `src/Web/PushSchedule.cs` controls when the mod sends data.
+
+Run their unit tests with this command. The tests do not need the game.
 
 ```
 dotnet test tests/Trapline.Tests
 ```
 
-The page script has its own tests, which run the built script against the real `CoreUI1.html` of the installed game (Vitest with jsdom). Run them after a game update. They need the game install, and `SL_GAME_DIR` overrides the default Steam path. The other checks of the page code are the CSS lint and the type check:
+The page tests use Vitest with jsdom. They run the built script against `CoreUI1.html` from the installed game. Run them after a game update. Set `SL_GAME_DIR` if the game is outside the default Steam path.
+
+Run the page tests, CSS lint, and type check from the mod root:
 
 ```
 npm test
@@ -61,7 +73,7 @@ npm run lint
 npm run typecheck
 ```
 
-`npm run dev` starts a dev page that shows the game's HUD with the page script and a few fake traps in a normal browser, and reloads it after each change of a page file. It is for look and layout work. The game is the place to verify a change.
+Run `npm run dev` to preview the HUD with simulated traps in a browser. The preview reloads when a page file changes. Use it to check appearance and layout. Check behavior in the game.
 
 ## Package
 

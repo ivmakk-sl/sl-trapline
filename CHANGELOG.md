@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- Much less work for the game's UI browser: the mod sends its page script to the HUD once, and sends the floor groups and the button word only when they change. Trapline 1.0.0 sent the whole script again for each trap placed or picked up. The button and the grid look and work as before.
+- Trapline sends less repeated data to the HUD when you place or remove traps. The Take All button and trap grid look and work as before.
 
 ## [1.0.0] - 2026-09-24
 
