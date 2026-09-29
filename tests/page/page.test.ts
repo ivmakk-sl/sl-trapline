@@ -150,6 +150,19 @@ if (!gameFileExists) {
     assert.ok(btn.nextElementSibling.classList.contains('trap-toggle-chevron'), 'the button must sit right before the chevron');
   });
 
+  test('jsdom: a Stopped Auto Trap Cage as the only trap with prey shows the Take All button', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    // Status 3 Stopped with 8 prey in its storage box; the other traps have no prey.
+    await postTraps(coreWindow, [trap(1, 3, '', 8), trap(2, 2), trap(3, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+
+    const result = install(root);
+    assert.equal(result, 'installed', `install result was "${result}"`);
+
+    const btn = coreWindow.document.querySelector('.trap-toggle-row .trapline-take-all');
+    assert.ok(btn, 'no Take All button for a Stopped Auto Trap Cage');
+  });
+
   test('jsdom: no trap with prey shows no button', async (t) => {
     const coreWindow = await loadCoreWindow(t);
     await postTraps(coreWindow, [trap(1, 2), trap(2, 0)]);
