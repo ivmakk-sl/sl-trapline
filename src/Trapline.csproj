@@ -4,7 +4,7 @@
        This file names the plugin and adds the assemblies that only this mod uses. -->
   <PropertyGroup>
     <AssemblyName>Trapline</AssemblyName>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
   </PropertyGroup>
 
   <!-- The page script is built from src/Web/ by Vite (package.json at the mod root) into one file,

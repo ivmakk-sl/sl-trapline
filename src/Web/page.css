@@ -87,6 +87,37 @@
   background: rgb(from var(--tl-gold) r g b / 95%);
 }
 
+/* The game's prey count (shown for more than one prey) as a badge at the bottom right. The absolute
+   place keeps it out of the flow of the cell, so the icon keeps its place and the cell its size. */
+.trap-popover.trapline-grid .trap-item-count {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  padding: 0 1px;
+  font-size: 7px;
+  line-height: 8px;
+  border-radius: 2px;
+  background: var(--tl-badge-bg);
+}
+
+/* A Stopped Auto Trap Cage: the same marker in red. */
+.trap-popover.trapline-grid .trap-item-row.is-halted {
+  border-color: rgb(from var(--tl-red) r g b / 90%);
+  box-shadow: 0 0 5px rgb(from var(--tl-red) r g b / 60%);
+}
+
+.trap-popover.trapline-grid .trap-item-row.is-halted::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgb(from var(--tl-red) r g b / 95%);
+}
+
 /* A usable slot with no trap. */
 .trapline-empty-cell {
   grid-row: var(--tl-row);

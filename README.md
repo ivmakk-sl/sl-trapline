@@ -2,11 +2,13 @@
 
 A mod for the Steam game *Survival Log* that collects the prey of all your traps with one click. In the HUD trap list, a "Take All" button (the game's own word) shows in the header row when at least one trap has prey. A click queues the game's normal pickup action for each trap that has prey: the character walks to each trap and each pickup takes its normal game time, the same as clicking a trap by hand, opening its panel, and pressing collect. Actions already queued run before the pickups. A second click before the route finishes adds no duplicate pickup.
 
+A trap has prey when prey is in the trap, or when prey is in the storage box of an Auto Trap Cage. At an Auto Trap Cage, the pickup is the game's own pickup of the storage box, the same as the game's "Collect All" button in the trap window: the character takes the prey of the storage box and the prey in the cage.
+
 The mod plans the order of the traps to keep the walk short. It clears your current floor first, then visits other floors in order of distance from the floor you were on when you clicked. On each floor, it goes to the nearest trap next.
 
-If the bag fills up during the route, the game shows its own "Inventory is full." message and the prey stays in that trap. The mod then removes the rest of the route from the action queue, so the character does not walk on to the next trap. Anything the player queued separately stays in the queue.
+If the bag fills up during the route, the game shows its own "Inventory is full." message and the prey stays in that trap. The mod then removes the rest of the route from the action queue, so the character does not walk on to the next trap. Anything the player queued separately stays in the queue. At an Auto Trap Cage, the bag can have room for only a part of the prey: the character takes what fits, the rest stays in the storage box, and the route stops there too.
 
-The open trap list is also a compact grid, with one line for each floor. The line starts with the floor name. After it comes one cell for each trap slot the player can use right now, whether it holds a trap or is free: a cell with a trap shows the trap icon, and a free slot is an empty cell. A trap with prey has a gold border and a gold dot. Each trap keeps its cell while the usable slots on that floor stay the same. A line has at most 6 cells, and more cells continue on the next line. A floor with free slots and no trap also shows its line. A click on a trap cell does what a click on that trap in the game's own list does. A click on an empty cell does nothing.
+The open trap list is also a compact grid, with one line for each floor. The line starts with the floor name. After it comes one cell for each trap slot the player can use right now, whether it holds a trap or is free: a cell with a trap shows the trap icon, and a free slot is an empty cell. A trap with prey has a gold border and a gold dot. A Stopped Auto Trap Cage (its storage box is full, so it catches nothing more) has a red border and a red dot. When a trap holds more than one prey, its cell shows the game's count (for example ×4) as a small badge in the corner. Each trap keeps its cell while the usable slots on that floor stay the same. A line has at most 6 cells, and more cells continue on the next line. A floor with free slots and no trap also shows its line. A click on a trap cell does what a click on that trap in the game's own list does. A click on an empty cell does nothing.
 
 Trapline does not rebait a trap after collecting it. Rebait by hand, as usual. The mod writes and changes no file of the game install, and it does not change the traps, the prey, or the save format.
 
@@ -18,7 +20,8 @@ Do not install Trapline together with [TrapPickAll](https://www.nexusmods.com/su
 
 ## Requirements
 
-The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
+- Survival Log 1.1.18153 (the Autumn Update) or later.
+- The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
 
 ## Install
 

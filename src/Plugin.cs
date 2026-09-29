@@ -8,7 +8,7 @@ using GameCore.HotUpdate.Battle.Logic;
 
 namespace Trapline
 {
-    [BepInPlugin(PluginGuid, "Trapline", "1.0.1")]
+    [BepInPlugin(PluginGuid, "Trapline", "1.1.0")]
     [BepInProcess("SurvivalLog.exe")]
     public sealed class Plugin : BasePlugin
     {

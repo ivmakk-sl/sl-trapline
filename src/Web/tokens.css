@@ -5,9 +5,14 @@
   --tl-white: #fff;
   --tl-black: #000;
   --tl-gold: #ffc107;
+  /* The color of the game's is-halted border (a Stopped Auto Trap Cage). */
+  --tl-red: #e57373;
 
   /* The frame and the background of a cell of the trap grid. */
   --tl-cell-border: rgb(from var(--tl-white) r g b / 15%);
   --tl-cell-bg: rgb(from var(--tl-black) r g b / 30%);
   --tl-text-shadow: 1px 1px 2px var(--tl-black);
+
+  /* The background of the prey count badge in a cell. */
+  --tl-badge-bg: rgb(from var(--tl-black) r g b / 70%);
 }

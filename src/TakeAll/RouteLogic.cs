@@ -15,6 +15,18 @@ namespace Trapline
             public float Z;
         }
 
+        // A trap goes into the route when prey is in the trap, or when the storage box of an Auto Trap
+        // Cage holds prey (storeCount is the count of items in the storage box).
+        public static bool HasPrey(bool preyInTrap, int storeCount) => preyInTrap || storeCount > 0;
+
+        // The route sends a trap through the game's pickup of the storage box (the pickup of the
+        // game's "Collect All" button) when its storage box holds prey, else through the plain pickup.
+        public static bool UseStorePath(int storeCount) => storeCount > 0;
+
+        // A pickup of the route is done only when no prey is left in the trap or in its storage box.
+        // A part take (the bag became full) leaves prey behind and is a failed pickup.
+        public static bool PickupDone(bool preyInTrapAfter, int storeCountAfter) => !HasPrey(preyInTrapAfter, storeCountAfter);
+
         // Orders the traps floor by floor, nearest neighbour within a floor. floorCosts is the cost
         // from the character floor to each other floor.
         public static List<int> BuildRoute(
@@ -96,10 +108,12 @@ namespace Trapline
     }
 
     // The in-memory state of one Take All route, for the full-bag stop.
-    // Holds the trap ids that were queued and are not done yet, in order.
+    // Holds the trap ids that were queued and are not done yet, in order, and the ids that the route
+    // sent through the storage box path.
     public sealed class RouteState
     {
         private readonly List<int> _remaining = new List<int>();
+        private readonly HashSet<int> _storePath = new HashSet<int>();
 
         public bool IsActive { get; private set; }
 
@@ -107,7 +121,21 @@ namespace Trapline
         {
             _remaining.Clear();
             _remaining.AddRange(orderedIds);
+            _storePath.Clear();
             IsActive = true;
+        }
+
+        // Records that the route sent this trap through the storage box path. Each such pickup leaves
+        // a take request in the game's queue of that trap, which the full-bag stop must take out again.
+        public void MarkStorePath(int trapId) => _storePath.Add(trapId);
+
+        // The ids of the given list that the current route sent through the storage box path.
+        public IReadOnlyList<int> StorePathIds(IEnumerable<int> ids)
+        {
+            var result = new List<int>();
+            foreach (int id in ids)
+                if (_storePath.Contains(id)) result.Add(id);
+            return result;
         }
 
         public bool Contains(int trapId) => IsActive && _remaining.Contains(trapId);
