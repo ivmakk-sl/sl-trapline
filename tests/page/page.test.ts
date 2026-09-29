@@ -131,8 +131,8 @@ if (!gameFileExists) {
     await wait(coreWindow, 30);
   }
 
-  function trap(id: number, status: number, roomName?: string) {
-    return { trapInstanceId: id, trapName: 'Snare', roomName: roomName || '', iconUrl: '', status };
+  function trap(id: number, status: number, roomName?: string, preyCount?: number) {
+    return { trapInstanceId: id, trapName: 'Snare', roomName: roomName || '', iconUrl: '', status, preyCount: preyCount || 0 };
   }
 
   test('jsdom: a status-1 trap shows the Take All button, styled before the chevron', async (t) => {
@@ -148,6 +148,19 @@ if (!gameFileExists) {
     assert.ok(btn, 'the Take All button was not added to the header row');
     assert.equal(btn.textContent, 'Take All');
     assert.ok(btn.nextElementSibling.classList.contains('trap-toggle-chevron'), 'the button must sit right before the chevron');
+  });
+
+  test('jsdom: a Stopped Auto Trap Cage as the only trap with prey shows the Take All button', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    // Status 3 Stopped with 8 prey in its storage box; the other traps have no prey.
+    await postTraps(coreWindow, [trap(1, 3, '', 8), trap(2, 2), trap(3, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+
+    const result = install(root);
+    assert.equal(result, 'installed', `install result was "${result}"`);
+
+    const btn = coreWindow.document.querySelector('.trap-toggle-row .trapline-take-all');
+    assert.ok(btn, 'no Take All button for a Stopped Auto Trap Cage');
   });
 
   test('jsdom: no trap with prey shows no button', async (t) => {
@@ -588,6 +601,59 @@ if (!gameFileExists) {
     assert.ok(doc.querySelector('.trap-item-row.is-prey').matches(marker), 'the marker rule selects a prey cell');
     assert.ok(!doc.querySelector('.trap-item-row.is-armed').matches(marker), 'the marker rule does not select an armed cell');
     assert.ok(!doc.querySelector('.trap-item-row.is-nobait').matches(marker), 'a no-bait cell looks the same as an armed cell');
+  });
+
+  test('jsdom: a Stopped Auto Trap Cage has the red marker and no gold marker', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    // Status 3 Stopped, 1 prey, 0 armed.
+    await postTraps(coreWindow, [trap(1, 3), trap(2, 1), trap(3, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+    install(root);
+    await expand(coreWindow);
+    setGroups(root, ONE_FLOOR_THREE);
+
+    const doc = coreWindow.document;
+    const css = styleText(doc);
+    assert.match(css, /\.trap-popover\.trapline-grid\.trap-item-row\.is-halted\{[^}]*border-color:rgb\(fromvar\(--tl-red\)rgb\/90%\)[^}]*box-shadow:/, 'a red border and glow on a Stopped cell');
+    assert.match(css, /\.trap-popover\.trapline-grid\.trap-item-row\.is-halted::after\{[^}]*width:5px;height:5px[^}]*background:rgb\(fromvar\(--tl-red\)/, 'a red dot on a Stopped cell');
+    assert.match(css, /--tl-red:#e57373;/, 'the red token, the color of the game\'s is-halted border');
+
+    const red = '.trap-popover.trapline-grid .trap-item-row.is-halted';
+    const gold = '.trap-popover.trapline-grid .trap-item-row.is-prey';
+    const halted = doc.querySelector('.trap-item-row.is-halted');
+    assert.ok(halted.matches(red), 'the red marker rule selects a Stopped cell');
+    assert.ok(!halted.matches(gold), 'the gold marker rule does not select a Stopped cell');
+    assert.ok(!doc.querySelector('.trap-item-row.is-prey').matches(red), 'the red marker rule does not select a prey cell');
+    assert.ok(!doc.querySelector('.trap-item-row.is-armed').matches(red), 'the red marker rule does not select an armed cell');
+  });
+
+  test('jsdom: the game prey count is a badge in the corner of its cell, and one prey has no badge', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    // Trap 1: an Auto Trap Cage with 4 prey. Trap 2: one prey, so the game's v-if adds no count.
+    await postTraps(coreWindow, [trap(1, 1, '', 4), trap(2, 1, '', 1), trap(3, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+    install(root);
+    await expand(coreWindow);
+    setGroups(root, ONE_FLOOR_THREE);
+
+    const doc = coreWindow.document;
+    const counts = [...doc.querySelectorAll('.trap-item-count')];
+    assert.equal(counts.length, 1, 'only the trap with more than one prey has a count');
+    const badge = counts[0];
+    assert.equal(badge.textContent, '×4', 'the game\'s own text');
+
+    const badgeRule = '.trap-popover.trapline-grid .trap-item-count';
+    assert.ok(badge.matches(badgeRule), 'the badge rule selects the count in a grid cell');
+    const badgeStyle = coreWindow.getComputedStyle(badge);
+    assert.equal(badgeStyle.position, 'absolute', 'the badge is out of the flow of the cell, so the icon stays in place');
+    assert.equal(badgeStyle.right, '0px');
+    assert.equal(badgeStyle.bottom, '0px');
+    assert.match(styleText(doc), /\.trap-popover\.trapline-grid\.trap-item-count\{[^}]*background:var\(--tl-badge-bg\)/, 'a dark background from the tokens');
+
+    const row = badge.closest('.trap-item-row');
+    const rowStyle = coreWindow.getComputedStyle(row);
+    assert.equal(rowStyle.width, '22px', 'the badge does not make the cell wider');
+    assert.equal(rowStyle.height, '22px', 'the badge does not make the cell higher');
   });
 
   test('jsdom: an empty cell is a HUD area and a click on it posts nothing', async (t) => {

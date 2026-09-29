@@ -110,6 +110,42 @@ public class RouteLogicTests
         Assert.Equal(new List<int> { 2, 5 }, route);
     }
 
+    [Theory]
+    [InlineData(true, 0, true)]
+    [InlineData(false, 3, true)]
+    [InlineData(true, 3, true)]
+    [InlineData(false, 0, false)]
+    public void HasPrey_PreyInTheTrapOrInTheStorageBox(bool preyInTrap, int storeCount, bool expected)
+    {
+        Assert.Equal(expected, RouteLogic.HasPrey(preyInTrap, storeCount));
+    }
+
+    [Theory]
+    [InlineData(3, true)]
+    [InlineData(1, true)]
+    [InlineData(0, false)]
+    public void UseStorePath_OnlyWhenTheStorageBoxHoldsPrey(int storeCount, bool expected)
+    {
+        Assert.Equal(expected, RouteLogic.UseStorePath(storeCount));
+    }
+
+    [Theory]
+    [InlineData(false, 0, true)]
+    [InlineData(true, 0, false)]
+    [InlineData(false, 5, false)]
+    [InlineData(true, 5, false)]
+    public void PickupDone_OnlyWhenTheTrapAndTheStorageBoxAreEmpty(bool preyInTrapAfter, int storeCountAfter, bool expected)
+    {
+        Assert.Equal(expected, RouteLogic.PickupDone(preyInTrapAfter, storeCountAfter));
+    }
+
+    [Fact]
+    public void PickupDone_PartTakeOfAStorageBox_IsAFailedPickup()
+    {
+        // The bag had room for 3 of 8 prey, so 5 prey stay in the storage box.
+        Assert.False(RouteLogic.PickupDone(preyInTrapAfter: false, storeCountAfter: 8 - 3));
+    }
+
     [Fact]
     public void RouteState_FailInTheMiddle_ReturnsRemainingIdsAndEndsRoute()
     {
@@ -163,6 +199,32 @@ public class RouteLogicTests
         Assert.False(state.Contains(2));
         Assert.True(state.Contains(3));
         Assert.True(state.Contains(4));
+    }
+
+    [Fact]
+    public void RouteState_AfterFail_GivesTheRemainingIdsThatUsedTheStorageBoxPath()
+    {
+        var state = new RouteState();
+        state.Start(new List<int> { 1, 2, 3, 4 });
+        state.MarkStorePath(1);
+        state.MarkStorePath(3);
+
+        var remaining = state.Fail(1);
+
+        Assert.Equal(new List<int> { 3 }, state.StorePathIds(remaining));
+    }
+
+    [Fact]
+    public void RouteState_NewRoute_ForgetsTheStorageBoxPathOfTheOldRoute()
+    {
+        var state = new RouteState();
+        state.Start(new List<int> { 1, 2 });
+        state.MarkStorePath(2);
+
+        state.Start(new List<int> { 2, 3 });
+        var remaining = state.Fail(3);
+
+        Assert.Empty(state.StorePathIds(remaining));
     }
 
     [Fact]

@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-29
+
+### Added
+
+- Take All also takes the prey in the storage box of an Auto Trap Cage, with the game's own pickup of the "Collect All" button in the trap window. If the bag has room for only a part of the prey, the rest stays in the storage box and the route stops at that cage.
+- A Stopped Auto Trap Cage (its storage box is full) has a red border and a red dot in the trap grid.
+- A trap with more than one prey shows the game's count (for example ×4) as a small badge in the corner of its cell.
+
+### Removed
+
+- Support for game versions before 1.1.18153 (the Autumn Update). Trapline 1.1.0 needs Survival Log 1.1.18153 or later.
+
 ## [1.0.1] - 2026-09-27
 
 ### Changed
