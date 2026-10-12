@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json.Nodes;
+using SlShared.Json;
 using Trapline;
 using Xunit;
 
@@ -44,6 +45,6 @@ public class PageJsonTests
     [InlineData(null, "\"\"")]
     public void Str_is_a_quoted_JSON_string(string text, string expected)
     {
-        Assert.Equal(expected, PageJson.Str(text));
+        Assert.Equal(expected, JsonText.Str(text));
     }
 }

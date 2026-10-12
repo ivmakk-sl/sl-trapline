@@ -1,0 +1,6 @@
+# Library copy of shared/i18n. Do not edit it: edit shared/i18n/, then run tools/shared-sync.ps1 -Mod Trapline -Lib i18n.
+name=i18n
+version=1.0.0
+sha256 cs/I18nCheck.cs a5dbb4a4ee3899ec3b9b1c667a610d654fcd6db4a69a33e0e268e6fd2e99dc9e
+sha256 cs/I18nJson.cs 0711e996b2724b8b9414ee11cb3587d5147aecd52d5a308abb12300261f7529d
+sha256 cs/I18nTexts.cs 6cabdcc13c6476b1df10ea0f41b4e6120572ab5f982115ed01272b434c517fc1

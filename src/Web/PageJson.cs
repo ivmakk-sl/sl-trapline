@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
+using SlShared.Json;
 
 namespace Trapline
 {
@@ -19,7 +20,7 @@ namespace Trapline
 
         // The data of setData: the button word and the floor groups (GroupsJson).
         public static string DataJson(string takeAll, string groupsJson) =>
-            "{\"words\":{\"takeAll\":" + Str(takeAll) + "},\"groups\":" + groupsJson + "}";
+            "{\"words\":{\"takeAll\":" + JsonText.Str(takeAll) + "},\"groups\":" + groupsJson + "}";
 
         // The result of a command when the root page has no page script: a new root page, or one that
         // the game built again after a browser crash.
@@ -50,7 +51,7 @@ namespace Trapline
                 if (i > 0) sb.Append(',');
                 var f = floors[i];
                 sb.Append("{\"id\":").Append(f.Id)
-                    .Append(",\"label\":").Append(Str(f.Label))
+                    .Append(",\"label\":").AppendStr(f.Label)
                     .Append(",\"traps\":").Append(f.Traps)
                     .Append(",\"slots\":").Append(f.Slots)
                     .Append('}');
@@ -74,30 +75,6 @@ namespace Trapline
                 sb.Append('"').Append(kv.Key).Append("\":").Append(kv.Value);
             }
             sb.Append('}');
-        }
-
-        // A JSON string literal, with its quotes. Also a JavaScript string literal.
-        internal static string Str(string s)
-        {
-            var sb = new StringBuilder((s ?? "").Length + 2);
-            sb.Append('"');
-            foreach (char c in s ?? "")
-            {
-                switch (c)
-                {
-                    case '"': sb.Append("\\\""); break;
-                    case '\\': sb.Append("\\\\"); break;
-                    case '\n': sb.Append("\\n"); break;
-                    case '\r': sb.Append("\\r"); break;
-                    case '\t': sb.Append("\\t"); break;
-                    default:
-                        if (c < 0x20) sb.Append("\\u").Append(((int)c).ToString("x4"));
-                        else sb.Append(c);
-                        break;
-                }
-            }
-            sb.Append('"');
-            return sb.ToString();
         }
     }
 }

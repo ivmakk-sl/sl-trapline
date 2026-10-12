@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- Take All walks the shortest route: on each floor it takes the order with the shortest walk through all traps with prey, measured along the paths your character really walks, around walls and furniture. After your floor, it goes on to the floor that the stairs reach first from the floor before.
+
 ## [1.1.0] - 2026-09-29
 
 ### Added

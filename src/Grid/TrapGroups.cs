@@ -149,7 +149,7 @@ namespace Trapline
             string groupsJson = PageJson.GroupsJson(floors, trapFloor, trapCell);
 
             summary = $"floors={floors.Count} traps={trapFloor.Count}";
-            return PageJson.DataJson(TrapWords.TakeAll(), groupsJson);
+            return PageJson.DataJson(ModTexts.Current()["takeAll"], groupsJson);
         }
     }
 }

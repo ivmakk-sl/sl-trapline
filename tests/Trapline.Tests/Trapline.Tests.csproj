@@ -13,6 +13,10 @@
     <Compile Include="..\..\src\Grid\GridLogic.cs" Link="GridLogic.cs" />
     <Compile Include="..\..\src\Web\PageJson.cs" Link="PageJson.cs" />
     <Compile Include="..\..\src\Web\PushSchedule.cs" Link="PushSchedule.cs" />
+    <Compile Include="..\..\src\Shared\json\cs\*.cs" Link="Shared\json\%(Filename)%(Extension)" />
+    <Compile Include="..\..\src\Shared\i18n\cs\*.cs" Link="Shared\i18n\%(Filename)%(Extension)" />
+    <Compile Include="..\..\src\Shared\route\cs\*.cs" Link="Shared\route\%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\src\i18n\*.json" LogicalName="Trapline.i18n.%(Filename)%(Extension)" />
     <None Include="..\fixtures\*.json" Link="fixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

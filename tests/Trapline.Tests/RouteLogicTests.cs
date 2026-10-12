@@ -1,11 +1,19 @@
+using System;
 using System.Collections.Generic;
 using Trapline;
 using Xunit;
 
 public class RouteLogicTests
 {
+    // The route of Take All comes from the route library (shared/route); these tests check the traps that go in and
+    // the trap ids that come out, with the rules of the spec "Floor-by-floor route".
+    private static List<int> Order(List<RouteLogic.Trap> traps, int characterFloor = 1, float x = 0, float z = 0,
+        Func<int, int, int> floorCost = null,
+        Func<(float X, float Y, float Z), (float X, float Y, float Z), double> walk = null) =>
+        RouteLogic.Order(traps, characterFloor, x, 0, z, floorCost ?? ((a, b) => a == b ? 0 : 1), walk);
+
     [Fact]
-    public void BuildRoute_OneFloor_NearestNeighbourFromCharacter()
+    public void Order_OneFloor_NearestTrapFromTheCharacterFirst()
     {
         var traps = new List<RouteLogic.Trap>
         {
@@ -13,73 +21,49 @@ public class RouteLogicTests
             new RouteLogic.Trap { Id = 2, Floor = 1, X = 1, Z = 0 },
         };
 
-        var route = RouteLogic.BuildRoute(traps, characterFloor: 1, characterX: 0, characterZ: 0, floorCosts: new Dictionary<int, float>());
-
-        Assert.Equal(new List<int> { 2, 1 }, route);
+        Assert.Equal(new List<int> { 2, 1 }, Order(traps));
     }
 
     [Fact]
-    public void BuildRoute_CharacterFloorGoesFirst()
+    public void Order_TrapsOnTwoFloors_TheFloorOfTheCharacterFirst()
     {
         var traps = new List<RouteLogic.Trap>
         {
             new RouteLogic.Trap { Id = 1, Floor = 2, X = 0, Z = 0 },
+            new RouteLogic.Trap { Id = 3, Floor = 1, X = 5, Z = 0 },
             new RouteLogic.Trap { Id = 2, Floor = 1, X = 0, Z = 0 },
         };
-        var floorCosts = new Dictionary<int, float> { { 2, 1f } };
 
-        var route = RouteLogic.BuildRoute(traps, characterFloor: 1, characterX: 0, characterZ: 0, floorCosts: floorCosts);
-
-        Assert.Equal(new List<int> { 2, 1 }, route);
+        Assert.Equal(new List<int> { 2, 3, 1 }, Order(traps));
     }
 
     [Fact]
-    public void BuildRoute_NoTrapOnCharacterFloor_NearestFloorByCostComesFirst()
+    public void Order_NoPreyOnTheCurrentFloor_TheNearerFloorFirst()
     {
         var traps = new List<RouteLogic.Trap>
         {
             new RouteLogic.Trap { Id = 1, Floor = 2, X = 0, Z = 0 },
             new RouteLogic.Trap { Id = 2, Floor = 3, X = 0, Z = 0 },
         };
-        var floorCosts = new Dictionary<int, float> { { 2, 5f }, { 3, 2f } };
+        int Cost(int a, int b) => a == b ? 0 : (a, b) == (1, 2) || (a, b) == (2, 1) ? 5 : 2;
 
-        var route = RouteLogic.BuildRoute(traps, characterFloor: 1, characterX: 0, characterZ: 0, floorCosts: floorCosts);
-
-        Assert.Equal(new List<int> { 2, 1 }, route);
+        Assert.Equal(new List<int> { 2, 1 }, Order(traps, floorCost: Cost));
     }
 
     [Fact]
-    public void BuildRoute_EqualCost_FloorIdOrder()
+    public void Order_EqualFloorCost_TheLowerFloorIdFirst()
     {
         var traps = new List<RouteLogic.Trap>
         {
             new RouteLogic.Trap { Id = 1, Floor = 3, X = 0, Z = 0 },
             new RouteLogic.Trap { Id = 2, Floor = 2, X = 0, Z = 0 },
         };
-        var floorCosts = new Dictionary<int, float> { { 2, 5f }, { 3, 5f } };
 
-        var route = RouteLogic.BuildRoute(traps, characterFloor: 1, characterX: 0, characterZ: 0, floorCosts: floorCosts);
-
-        Assert.Equal(new List<int> { 2, 1 }, route);
+        Assert.Equal(new List<int> { 2, 1 }, Order(traps, floorCost: (a, b) => a == b ? 0 : 5));
     }
 
     [Fact]
-    public void BuildRoute_FloorMissingFromCostTable_SortsAfterFloorsWithCost()
-    {
-        var traps = new List<RouteLogic.Trap>
-        {
-            new RouteLogic.Trap { Id = 1, Floor = 2, X = 0, Z = 0 },
-            new RouteLogic.Trap { Id = 2, Floor = 3, X = 0, Z = 0 },
-        };
-        var floorCosts = new Dictionary<int, float> { { 3, 100f } };
-
-        var route = RouteLogic.BuildRoute(traps, characterFloor: 1, characterX: 0, characterZ: 0, floorCosts: floorCosts);
-
-        Assert.Equal(new List<int> { 2, 1 }, route);
-    }
-
-    [Fact]
-    public void BuildRoute_LaterFloorStartsAtTrapNearestToLastTrap()
+    public void Order_LaterFloorStartsAtTheLastTrapOfTheFloorBefore()
     {
         var traps = new List<RouteLogic.Trap>
         {
@@ -87,17 +71,45 @@ public class RouteLogicTests
             new RouteLogic.Trap { Id = 2, Floor = 2, X = 10, Z = 0 },
             new RouteLogic.Trap { Id = 3, Floor = 2, X = 0, Z = 0 },
         };
-        var floorCosts = new Dictionary<int, float> { { 2, 1f } };
-
-        var route = RouteLogic.BuildRoute(traps, characterFloor: 1, characterX: 0, characterZ: 0, floorCosts: floorCosts);
 
         // Floor 1's only trap is at (20,0). Floor 2 starts from there, not from the character
         // position (0,0), so trap 2 at (10,0) is nearer than trap 3 at (0,0) and comes first.
-        Assert.Equal(new List<int> { 1, 2, 3 }, route);
+        Assert.Equal(new List<int> { 1, 2, 3 }, Order(traps));
     }
 
     [Fact]
-    public void BuildRoute_TiesByTrapId()
+    public void Order_AWallBetweenTwoNearTraps_TheTrapOnTheWayFirst()
+    {
+        // Trap 2 is 1 m from trap 1 in a straight line, behind a wall: the walk from 1 to 2 goes around it past trap 3.
+        var traps = new List<RouteLogic.Trap>
+        {
+            new RouteLogic.Trap { Id = 1, Floor = 1, X = 1, Z = 0 },
+            new RouteLogic.Trap { Id = 2, Floor = 1, X = 2, Z = 0 },
+            new RouteLogic.Trap { Id = 3, Floor = 1, X = 10, Z = 0 },
+        };
+        double Wall((float X, float Y, float Z) a, (float X, float Y, float Z) b) =>
+            (a.X == 1 && b.X == 2) || (a.X == 2 && b.X == 1) ? 100 : Math.Abs(a.X - b.X) + Math.Abs(a.Z - b.Z);
+
+        Assert.Equal(new List<int> { 1, 2, 3 }, Order(traps));
+        Assert.Equal(new List<int> { 1, 3, 2 }, Order(traps, walk: Wall));
+    }
+
+    [Fact]
+    public void Order_TwoEndsOfAFloor_NoWalkBack()
+    {
+        var traps = new List<RouteLogic.Trap>
+        {
+            new RouteLogic.Trap { Id = 1, Floor = 1, X = 20, Z = 0 },
+            new RouteLogic.Trap { Id = 2, Floor = 1, X = 1, Z = 0 },
+            new RouteLogic.Trap { Id = 3, Floor = 1, X = 21, Z = 0 },
+            new RouteLogic.Trap { Id = 4, Floor = 1, X = 2, Z = 0 },
+        };
+
+        Assert.Equal(new List<int> { 2, 4, 1, 3 }, Order(traps));
+    }
+
+    [Fact]
+    public void Order_TiesByTrapId()
     {
         var traps = new List<RouteLogic.Trap>
         {
@@ -105,9 +117,18 @@ public class RouteLogicTests
             new RouteLogic.Trap { Id = 2, Floor = 1, X = 1, Z = 0 },
         };
 
-        var route = RouteLogic.BuildRoute(traps, characterFloor: 1, characterX: 0, characterZ: 0, floorCosts: new Dictionary<int, float>());
+        Assert.Equal(new List<int> { 2, 5 }, Order(traps));
+    }
 
-        Assert.Equal(new List<int> { 2, 5 }, route);
+    [Fact]
+    public void Order_TheWalkHasTheHeightOfTheTrap()
+    {
+        var traps = new List<RouteLogic.Trap> { new RouteLogic.Trap { Id = 1, Floor = 1, X = 1, Y = 5, Z = 0 } };
+        (float X, float Y, float Z)? seen = null;
+
+        Order(traps, walk: (a, b) => { seen = b; return 1; });
+
+        Assert.Equal((1f, 5f, 0f), seen);
     }
 
     [Theory]

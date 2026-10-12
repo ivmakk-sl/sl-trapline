@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -44,6 +45,14 @@ namespace Trapline
             }
 
             Log.LogInfo("Trapline loaded.");
+        }
+
+        private static readonly HashSet<string> warned = new HashSet<string>();
+
+        // Logs a warning once for each distinct text, so a failure on each click does not flood the log.
+        internal static void WarnOnce(string message)
+        {
+            if (warned.Add(message)) Log.LogWarning(message);
         }
     }
 

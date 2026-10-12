@@ -4,7 +4,7 @@ A mod for the Steam game *Survival Log* that collects the prey of all your traps
 
 A trap has prey when prey is in the trap, or when prey is in the storage box of an Auto Trap Cage. At an Auto Trap Cage, the pickup is the game's own pickup of the storage box, the same as the game's "Collect All" button in the trap window: the character takes the prey of the storage box and the prey in the cage.
 
-The mod plans the order of the traps to keep the walk short. It clears your current floor first, then visits other floors in order of distance from the floor you were on when you clicked. On each floor, it goes to the nearest trap next.
+The mod plans the order of the traps for the shortest walk. It clears your current floor first, then goes on to the floor that the stairs reach first from there, and so on. On each floor it picks the order with the shortest walk through all traps with prey, measured along the paths your character really walks, around walls and furniture. The kind of trap and its prey do not change the order.
 
 If the bag fills up during the route, the game shows its own "Inventory is full." message and the prey stays in that trap. The mod then removes the rest of the route from the action queue, so the character does not walk on to the next trap. Anything the player queued separately stays in the queue. At an Auto Trap Cage, the bag can have room for only a part of the prey: the character takes what fits, the rest stays in the storage box, and the route stops there too.
 
@@ -55,10 +55,12 @@ The build runs Vite when a page source file changes. If the npm packages are mis
 
 These source files contain logic that does not need the game:
 
-- `src/TakeAll/RouteLogic.cs` calculates the route order.
+- `src/TakeAll/RouteLogic.cs` decides which traps go into the route and gives them to the route library, which calculates the route order.
 - `src/Grid/GridLogic.cs` calculates the floor slot layout.
 - `src/Web/PageJson.cs` prepares data for the web page.
 - `src/Web/PushSchedule.cs` controls when the mod sends data.
+
+`src/Shared/` holds copies of shared libraries of the modding workspace: the route order and the walk length (`route`), the JSON text (`json`), and the mod texts (`i18n`, with the files in `src/i18n/`). A copy is written by a sync from the workspace and never edited here; its own tests are in the workspace.
 
 Run their unit tests with this command. The tests do not need the game.
 

@@ -18,6 +18,8 @@
     <PageSource Include="Web\**\*.ts;Web\**\*.js;Web\**\*.css" />
     <PageSource Include="$(ModRoot)\package.json;$(ModRoot)\package-lock.json;$(ModRoot)\vite.config.ts" />
     <EmbeddedResource Include="$(PageBundle)" LogicalName="Trapline.page.js" />
+    <!-- The i18n files of the mod texts, read by the i18n library copy. -->
+    <EmbeddedResource Include="i18n\*.json" LogicalName="Trapline.i18n.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <Target Name="BuildPage" BeforeTargets="BeforeBuild" Inputs="@(PageSource)" Outputs="$(PageBundle)">
@@ -26,10 +28,12 @@
   </Target>
 
   <!-- The HUD work needs the web view: Vuplex for WebUILayer and its page messages, and R3 for the
-       ReactiveProperty state of State_Web_CoreUI1. -->
+       ReactiveProperty state of State_Web_CoreUI1. AIModule has the navigation mesh for the walk lengths of the
+       Take All route (the route library copy, src/Shared/route/cs-game/WalkLength.cs). -->
   <ItemGroup>
     <_Ref Include="$(BepInExInterop)\Vuplex.WebView.dll" />
     <_Ref Include="$(BepInExInterop)\R3.dll" />
+    <_Ref Include="$(BepInExInterop)\UnityEngine.AIModule.dll" />
     <Reference Include="@(_Ref)">
       <HintPath>%(FullPath)</HintPath>
       <Private>false</Private>
