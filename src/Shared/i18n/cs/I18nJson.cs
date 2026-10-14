@@ -1,4 +1,4 @@
-// Library copy of shared/i18n 1.0.0. Do not edit: see src/Shared/i18n/VERSION.
+// Library copy of shared/i18n 2.0.0. Do not edit: see src/Shared/i18n/VERSION.
 using System;
 using System.Collections.Generic;
 using System.Globalization;

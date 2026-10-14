@@ -113,9 +113,11 @@ if (!gameFileExists) {
     return runPageJs(root, 'window.__trapline.setData(' + JSON.stringify(data) + ')');
   }
 
-  // Sends the last data again (no data: the default word and no groups), which applies the features
-  // once, as the next C# push does.
-  function install(root: Win): string { return setData(root, lastData.get(root) || { words: {}, groups: null }); }
+  // Sends the last data again (no data: the English word that C# sends and no groups), which applies the
+  // features once, as the next C# push does.
+  function install(root: Win): string {
+    return setData(root, lastData.get(root) || { words: { takeAll: 'Take All' }, groups: null });
+  }
 
   function wait(win: Win, ms: number): Promise<void> {
     return new Promise((resolve) => win.setTimeout(resolve, ms));
@@ -148,6 +150,28 @@ if (!gameFileExists) {
     assert.ok(btn, 'the Take All button was not added to the header row');
     assert.equal(btn.textContent, 'Take All');
     assert.ok(btn.nextElementSibling.classList.contains('trap-toggle-chevron'), 'the button must sit right before the chevron');
+  });
+
+  test('jsdom: no button before C# sent the words, then the button with the sent word', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 1)]);
+    const root = makeRootWindow(t, coreWindow);
+
+    const result = runPageJs(root, 'window.__trapline.setData({"groups":null})');
+    assert.equal(result, 'installed', `setData result was "${result}"`);
+    assert.equal(coreWindow.document.querySelector('.trapline-take-all'), null, 'a button showed before the words');
+
+    setData(root, { words: { takeAll: '全部拾取' }, groups: null });
+    assert.equal(coreWindow.document.querySelector('.trap-toggle-row .trapline-take-all')?.textContent, '全部拾取');
+  });
+
+  test('jsdom: a word that C# did not send shows its name, not an English default', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 1)]);
+    const root = makeRootWindow(t, coreWindow);
+
+    setData(root, { words: {}, groups: null });
+    assert.equal(coreWindow.document.querySelector('.trap-toggle-row .trapline-take-all')?.textContent, 'takeAll');
   });
 
   test('jsdom: a Stopped Auto Trap Cage as the only trap with prey shows the Take All button', async (t) => {

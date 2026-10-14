@@ -10,6 +10,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Take All walks the shortest route: on each floor it takes the order with the shortest walk through all traps with prey, measured along the paths your character really walks, around walls and furniture. After your floor, it goes on to the floor that the stairs reach first from the floor before.
 
+### Fixed
+
+- The Take All button follows a change of the game language in the settings again. Survival Log 1.1.18599 changed how the game switches its language.
+- With a community translation of the game (Settings > Language), the Take All button shows the word of the translation, and Trapline writes no warning to the log.
+
+### Removed
+
+- Support for game versions before 1.1.18599 (the 10/13 Update). Trapline now needs Survival Log 1.1.18599 or later.
+
 ## [1.1.0] - 2026-09-29
 
 ### Added

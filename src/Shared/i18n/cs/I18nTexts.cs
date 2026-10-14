@@ -1,4 +1,4 @@
-// Library copy of shared/i18n 1.0.0. Do not edit: see src/Shared/i18n/VERSION.
+// Library copy of shared/i18n 2.0.0. Do not edit: see src/Shared/i18n/VERSION.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -8,19 +8,22 @@ using System.Text;
 
 namespace SlShared.I18n
 {
-    // The mod texts of one mod: its i18n files (en.json, zh.json, ...) and its text keys (text-keys.json). For gives
-    // the text of each mod text in one display language, in this order: the game's text of its text key, the i18n
-    // file of the language, en.json, the name itself. The library is game-free: the mod gives the LanguageType number
-    // of the game and a function that returns the game's text of a text key.
+    // The mod texts of one mod: its i18n files (en.json, zh.json, cs.json, ...) and its text keys (text-keys.json).
+    // For gives the text of each mod text in one display language, in this order: the game's text of its text key,
+    // the i18n file of the language, en.json, the name itself. The library is game-free: the mod gives the
+    // LanguageType number of the game, the code of the active community language pack, and a function that returns
+    // the game's text of a text key. The library alone picks the file of the language (CodeOrder).
     internal sealed class I18nTexts
     {
         public const string EnglishCode = "en";
         public const string TextKeysFile = "text-keys.json";
 
-        // The language code of each LanguageType number of the game (Chinese = 0, English = 1), lower-case BCP 47.
-        private static readonly string[] Codes = { "zh", "en" };
+        // The LanguageType numbers of the game (GameCore.HotUpdate.LanguageType).
+        private const int Chinese = 0;
+        private const int Community = 2;
 
-        private readonly Dictionary<string, Dictionary<string, string>> byCode = new Dictionary<string, Dictionary<string, string>>();
+        private readonly Dictionary<string, Dictionary<string, string>> byCode =
+            new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, string> textKeys = new Dictionary<string, string>();
         private readonly List<string> warnings = new List<string>();
         private readonly HashSet<string> warned = new HashSet<string>();
@@ -31,12 +34,30 @@ namespace SlShared.I18n
         // past the count that it wrote before.
         public IReadOnlyList<string> Warnings => warnings;
 
-        // The language codes that the library knows.
-        public static IReadOnlyList<string> KnownCodes => Codes;
+        // The language codes of the i18n files to try for a display language, first to last: Chinese is zh, en;
+        // English is en; a community language pack is its code, the main part of its code (cs for cs-CZ), en. A
+        // Chinese pack (zh-TW) so reaches zh.json through its main part, and no other pack reaches Chinese. No number
+        // (the config is not ready), a pack with no code, and a number that the library does not know give en.
+        public static IReadOnlyList<string> CodeOrder(int? languageType, string communityCode)
+        {
+            var order = new List<string>();
+            if (languageType == Chinese) order.Add("zh");
+            else if (languageType == Community && !string.IsNullOrWhiteSpace(communityCode))
+            {
+                string code = communityCode.Trim();
+                order.Add(code);
+                int dash = code.IndexOf('-');
+                if (dash > 0) Add(order, code.Substring(0, dash));
+            }
+            Add(order, EnglishCode);
+            return order;
+        }
 
-        // The code of a LanguageType number, or null for a number that the library does not know.
-        public static string CodeOf(int languageType) =>
-            languageType >= 0 && languageType < Codes.Length ? Codes[languageType] : null;
+        private static void Add(List<string> order, string code)
+        {
+            foreach (string c in order) if (string.Equals(c, code, StringComparison.OrdinalIgnoreCase)) return;
+            order.Add(code);
+        }
 
         // The texts of the i18n files that are embedded in the assembly as <prefix>.i18n.<file name>. Read once.
         public static I18nTexts Load(Assembly assembly, string prefix) => Parse(ReadFiles(assembly, prefix));
@@ -88,20 +109,21 @@ namespace SlShared.I18n
             return texts;
         }
 
-        // The texts of one display language. gameText gives the game's text of a text key in that language; null
-        // reads no text key (a language other than the display language). languageName is the enum name of the
-        // number, for the warning of a language that the library does not know.
-        public I18nTextSet For(int languageType, Func<string, string> gameText, string languageName = null)
+        // The texts of one display language: the LanguageType number of the game (null when the mod cannot read it)
+        // and the code of the active community language pack (null for none). The first i18n file of CodeOrder gives
+        // the texts, and en.json each text that it leaves out. gameText gives the game's text of a text key in that
+        // language; null reads no text key (a language other than the display language).
+        public I18nTextSet For(int? languageType, string communityCode, Func<string, string> gameText)
         {
-            string code = CodeOf(languageType);
-            if (code == null)
+            string code = EnglishCode;
+            Dictionary<string, string> language = null;
+            foreach (string c in CodeOrder(languageType, communityCode))
             {
-                Warn("The display language " + languageType + (languageName != null ? " (" + languageName + ")" : "")
-                    + " has no language code in the i18n library: the mod texts show in English.");
-                code = EnglishCode;
+                if (!byCode.TryGetValue(c, out language)) continue;
+                code = FileCode(c);
+                break;
             }
             byCode.TryGetValue(EnglishCode, out var english);
-            byCode.TryGetValue(code, out var language);
 
             var names = new List<string>();
             var seen = new HashSet<string>();
@@ -180,6 +202,13 @@ namespace SlShared.I18n
             return false;
         }
 
+        // The code as the file name of the mod writes it (cs-CZ for a pack code CS-cz).
+        private string FileCode(string code)
+        {
+            foreach (string c in byCode.Keys) if (string.Equals(c, code, StringComparison.OrdinalIgnoreCase)) return c;
+            return code;
+        }
+
         private static string FileText(Dictionary<string, string> file, string name) =>
             file != null && file.TryGetValue(name, out var text) && !string.IsNullOrEmpty(text) ? text : null;
 
@@ -205,7 +234,7 @@ namespace SlShared.I18n
             GameTextNames = gameTextNames;
         }
 
-        // The language code of the texts (en for a language that the library does not know).
+        // The language code of the i18n file that gives the texts (en when no file of the language is there).
         public string Language { get; }
 
         // The names of the mod texts that show the game's text of their text key.

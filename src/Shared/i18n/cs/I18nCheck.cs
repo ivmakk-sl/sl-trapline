@@ -1,6 +1,7 @@
-// Library copy of shared/i18n 1.0.0. Do not edit: see src/Shared/i18n/VERSION.
+// Library copy of shared/i18n 2.0.0. Do not edit: see src/Shared/i18n/VERSION.
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text.RegularExpressions;
 
 namespace SlShared.I18n
@@ -9,6 +10,11 @@ namespace SlShared.I18n
     internal static class I18nCheck
     {
         private static readonly Regex Placeholder = new Regex(@"\{([^{}]+)\}");
+
+        // The file name of an i18n file: a BCP 47 language tag (en, zh-TW, zh-Hant-TW), case ignored, and .json.
+        private static readonly Regex LanguageFileName = new Regex(@"^[a-z]{2,3}(-[a-z0-9]{2,8})*\.json$", RegexOptions.IgnoreCase);
+
+        private const string ChineseFile = "zh.json";
 
         // Each problem of the files (the file name to its JSON text), with the file and the mod text or the text key
         // in its text. constantTextKeys is the set of the constant text keys of the game context; null skips the
@@ -21,7 +27,7 @@ namespace SlShared.I18n
             {
                 if (!IsKnownFileName(file.Key))
                 {
-                    problems.Add(file.Key + ": the file name is not a language code that the i18n library knows, or " + I18nTexts.TextKeysFile + ".");
+                    problems.Add(file.Key + ": the file name is not a language code (en, zh-TW) or " + I18nTexts.TextKeysFile + ".");
                     continue;
                 }
                 try
@@ -70,12 +76,35 @@ namespace SlShared.I18n
             return problems;
         }
 
-        private static bool IsKnownFileName(string file)
+        // Each problem of the i18n files that the assembly embeds as <prefix>.i18n.<file name>: the problems of
+        // Problems, a missing zh.json, and each mod text of en.json that zh.json does not have. A mod ships each text
+        // in both base languages of the game. constantTextKeys is as for Problems.
+        public static IReadOnlyList<string> ModProblems(Assembly assembly, string prefix, IEnumerable<string> constantTextKeys)
         {
-            if (file == I18nTexts.TextKeysFile) return true;
-            foreach (string code in I18nTexts.KnownCodes)
-                if (file == code + ".json") return true;
-            return false;
+            var files = I18nTexts.ReadFiles(assembly, prefix);
+            var problems = new List<string>(Problems(files, constantTextKeys != null ? new HashSet<string>(constantTextKeys) : null));
+            string englishFile = I18nTexts.EnglishCode + ".json";
+            if (!files.TryGetValue(englishFile, out var englishText)) return problems;
+            if (!files.TryGetValue(ChineseFile, out var chineseText))
+            {
+                problems.Add(ChineseFile + ": the file is missing.");
+                return problems;
+            }
+            Dictionary<string, string> english, chinese;
+            try
+            {
+                english = I18nJson.Read(englishText);
+                chinese = I18nJson.Read(chineseText);
+            }
+            catch (FormatException) { return problems; }
+            foreach (string name in english.Keys)
+            {
+                if (!chinese.ContainsKey(name)) problems.Add(ChineseFile + ": the mod text " + name + " of " + englishFile + " is missing.");
+            }
+            return problems;
         }
+
+        private static bool IsKnownFileName(string file) =>
+            file == I18nTexts.TextKeysFile || LanguageFileName.IsMatch(file);
     }
 }

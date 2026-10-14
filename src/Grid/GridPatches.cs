@@ -51,12 +51,13 @@ namespace Trapline
         }
     }
 
-    // A language switch changes the button word and the floor labels. ConfigManager.SwitchLanguage(Boolean isChinese) returns a UniTask, so the
-    // Postfix fires once the method itself returns, not once the switch finishes; the mark only sets a
+    // A language switch changes the button word and the floor labels. ConfigManager.ApplyLanguageKey(String languageKey)
+    // (SwitchLanguage(Boolean isChinese) before game 1.1.18599) returns a UniTask, so the Postfix fires once the
+    // method itself returns, not once the switch finishes; the mark only sets a
     // flag, and the actual push waits for the next ActionManager.Update frame (FramePatch), which
     // gives the switch a frame to complete before TrapGroups reads the words and the floor names again.
-    [HarmonyPatch(typeof(ConfigManager), "SwitchLanguage")]
-    internal static class GridOnSwitchLanguage
+    [HarmonyPatch(typeof(ConfigManager), "ApplyLanguageKey")]
+    internal static class GridOnApplyLanguageKey
     {
         private static void Postfix()
         {

@@ -67,7 +67,7 @@ namespace Trapline
         // The floor name in the current display language. The floor-button JSON also carries
         // a name, but the floor switcher rebuilds it only on its own triggers (RA_FloorRefreshTags and
         // similar, confirmed by NativeDisasm to be what calls RebuildFloorButtons), not on every
-        // SwitchLanguage, so a name read out of a JSON captured before the switch could stay in the old
+        // language switch, so a name read out of a JSON captured before the switch could stay in the old
         // language until the player happens to reopen the floor switcher. Reducer_Web_CoreUI1's own
         // RebuildFloorButtons resolves each button's name from Config_MapPoint.Name (a text key) through
         // ConstantTextTools.GetLocalText; this does the same lookup with ConfigManager.GetLocalTxt directly, every push, so the label

@@ -3,10 +3,17 @@ import { ensureStyle, findFrame } from './core';
 import { applyGroups } from './grid';
 import { applyButton } from './takeAll';
 import type { CoreState, CoreWindow, Groups } from './types';
+import { word } from '../../Shared/i18n/web/words';
 
-// The data of the last setData: the button word (an English default until C# sends one) and the floor
-// groups (null until C# has pushed group data at least once, in which case the grid stays off).
-export const view: { takeAll: string; groups: Groups | null } = { takeAll: 'Take All', groups: null };
+// The data of the last setData: the mod texts (undefined until C# sends them, and the button stays off
+// until then) and the floor groups (null until C# has pushed group data at least once, in which case the
+// grid stays off).
+export const view: { words: Record<string, string> | undefined; groups: Groups | null } = { words: undefined, groups: null };
+
+// The button, only once C# sent the mod texts: the page has no word of its own.
+function applyTakeAll(doc: Document, state: CoreState): string {
+  return view.words ? applyButton(doc, state, word(view.words, 'takeAll')) : '';
+}
 
 let applying = false;
 
@@ -25,7 +32,7 @@ function apply(w: CoreWindow): string {
   ensureStyle(doc);
   const missing: string[] = [];
   try {
-    const m1 = applyButton(doc, state, view.takeAll); if (m1) missing.push(m1);
+    const m1 = applyTakeAll(doc, state); if (m1) missing.push(m1);
     const m2 = applyGroups(doc, state, view.groups); if (m2) missing.push(m2);
   } catch (e) { return 'error: ' + e; }
 
@@ -39,7 +46,7 @@ function apply(w: CoreWindow): string {
       try {
         ensureStyle(doc);
         const s: CoreState = w.eval('state');
-        applyButton(doc, s, view.takeAll);
+        applyTakeAll(doc, s);
         applyGroups(doc, s, view.groups);
       } catch (e) { /* a page update broke a part; the next setData() call reports it */ }
       finally { applying = false; }

@@ -35,9 +35,10 @@ export interface Groups {
   trapCell: Record<string, number>;
 }
 
-// The data of setData (PageJson.DataJson). groups null turns the grid off.
+// The data of setData (PageJson.DataJson): the mod texts by name, read through word. groups null turns the
+// grid off.
 export interface PageData {
-  words: { takeAll?: string };
+  words: Record<string, string>;
   groups: Groups | null;
 }
 

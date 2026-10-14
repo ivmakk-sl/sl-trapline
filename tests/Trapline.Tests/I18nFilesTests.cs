@@ -4,46 +4,35 @@ using Xunit;
 // Checks the i18n files of the mod (src/i18n/), embedded in the test assembly as in the mod DLL.
 public class I18nFilesTests
 {
-    private static Dictionary<string, string> Files() => I18nTexts.ReadFiles(typeof(I18nFilesTests).Assembly, "Trapline");
+    private static readonly System.Reflection.Assembly Assembly = typeof(I18nFilesTests).Assembly;
 
     [Fact]
     public void TheI18nFilesHaveNoProblem()
     {
-        Assert.Contains("en.json", Files().Keys);
-        Assert.Empty(I18nCheck.Problems(Files(), null));
+        Assert.Empty(I18nCheck.ModProblems(Assembly, "Trapline", null));
     }
 
     [GameContextFact]
     public void EachTextKeyIsAConstantTextOfTheGame()
     {
-        Assert.Empty(I18nCheck.Problems(Files(), ConstantTextTsv.Keys()));
+        Assert.Empty(I18nCheck.ModProblems(Assembly, "Trapline", ConstantTextTsv.Keys()));
     }
 
     // The words of the Take All button with no game text are the fallback words that the mod had in code before.
     [Fact]
     public void TheTakeAllWordWithNoGameTextIsTheOldFallbackWord()
     {
-        var texts = I18nTexts.Load(typeof(I18nFilesTests).Assembly, "Trapline");
-        Assert.Equal("Take All", texts.For(1, null)["takeAll"]);
-        Assert.Equal("全部拾取", texts.For(0, null)["takeAll"]);
+        var texts = I18nTexts.Load(Assembly, "Trapline");
+        Assert.Equal("Take All", texts.For(1, null, null)["takeAll"]);
+        Assert.Equal("全部拾取", texts.For(0, null, null)["takeAll"]);
     }
 
     // With a game text for the key, the button shows the game's own word.
     [Fact]
     public void TheTakeAllWordIsTheGameTextOfItsKey()
     {
-        var texts = I18nTexts.Load(typeof(I18nFilesTests).Assembly, "Trapline");
-        Assert.Equal("Collect", texts.For(1, key => key == "WebUI_ItemPickup_1" ? "Collect" : "")["takeAll"]);
-    }
-
-    [Fact]
-    public void ChineseHasEachModTextOfEnglish()
-    {
-        var english = I18nTexts.Load(typeof(I18nFilesTests).Assembly, "Trapline").For(1, null).ToDictionary();
-        var files = Files();
-        Assert.Contains("zh.json", files.Keys);
-        foreach (string name in english.Keys)
-            Assert.Contains("\"" + name + "\"", files["zh.json"]);
+        var texts = I18nTexts.Load(Assembly, "Trapline");
+        Assert.Equal("Collect", texts.For(1, null, key => key == "WebUI_ItemPickup_1" ? "Collect" : "")["takeAll"]);
     }
 }
 

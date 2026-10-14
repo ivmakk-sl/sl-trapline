@@ -7,11 +7,10 @@
 import { check, run, view } from './install';
 import type { PageData } from './types';
 
-// Stores the button word and the floor groups, and applies them in one pass. groups null turns the
+// Stores the mod texts and the floor groups, and applies them in one pass. groups null turns the
 // grid off.
 function setData(data: PageData): string {
-  const words = (data && data.words) || {};
-  if (typeof words.takeAll === 'string' && words.takeAll) view.takeAll = words.takeAll;
+  if (data && data.words) view.words = data.words;
   view.groups = (data && data.groups) || null;
   return run();
 }
