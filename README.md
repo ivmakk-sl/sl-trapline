@@ -20,7 +20,7 @@ Do not install Trapline together with [TrapPickAll](https://www.nexusmods.com/su
 
 ## Requirements
 
-- Survival Log 1.1.18153 (the Autumn Update) or later.
+- Survival Log 1.1.18599 (the 10/13 Update) or later.
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
 
 ## Install

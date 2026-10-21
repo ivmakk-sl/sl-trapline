@@ -1,3 +1,9 @@
+v1.2.0 - 2026-10-21
+Changed: Take All walks the shortest route: on each floor it takes the order with the shortest walk through all traps with prey, measured along the paths your character really walks, around walls and furniture. After your floor, it goes on to the floor that the stairs reach first from the floor before.
+Removed: Support for game versions before 1.1.18599 (the 10/13 Update). This version needs Survival Log 1.1.18599 or later.
+Fixed: The Take All button follows a change of the game language in the settings again.
+Fixed: With a community translation of the game (Settings > Language), the Take All button shows the word of the translation, and Trapline writes no warning to the log.
+
 v1.1.0 - 2026-09-29
 Added: Take All also takes the prey in the storage box of an Auto Trap Cage, the same as the game's "Collect All" button. If the bag has room for only a part of the prey, the rest stays in the storage box and the route stops at that cage.
 Added: A Stopped Auto Trap Cage has a red border and a red dot in the trap grid.
