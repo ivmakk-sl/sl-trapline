@@ -184,6 +184,8 @@ namespace Trapline
         // floor of the two routes can start from different places, and a floor change counts nothing).
         private static string WalkLine(List<RouteLogic.Trap> traps, List<int> route, int floor, Vector3 start, WalkLength walk)
         {
+            // The counts of the route alone: the measure of the straight-distance route below adds its own paths.
+            int paths = walk.Paths, allAreas = walk.AllAreaPaths, partial = walk.PartialPaths, fallbacks = walk.Fallbacks;
             var straight = RouteLogic.Order(traps, floor, start.x, start.y, start.z, FloorStairs.Count);
             var byId = new Dictionary<int, RouteLogic.Trap>();
             foreach (var trap in traps) byId[trap.Id] = trap;
@@ -191,8 +193,8 @@ namespace Trapline
             var (straightWalked, straightFirst) = Walked(straight, byId, floor, start, walk);
             return string.Format(System.Globalization.CultureInfo.InvariantCulture,
                 "Trapline take-all: walk {0:F1} m, the straight-distance route {1:F1} m; first floor {2:F1} m, the straight-distance route {3:F1} m; paths {4}, straight fallbacks {5} (walkable areas {6}, all areas {7}, partial {8})",
-                walked, straightWalked, walkedFirst, straightFirst, walk.Paths + walk.AllAreaPaths + walk.PartialPaths, walk.Fallbacks,
-                walk.Paths, walk.AllAreaPaths, walk.PartialPaths);
+                walked, straightWalked, walkedFirst, straightFirst, paths + allAreas + partial, fallbacks,
+                paths, allAreas, partial);
         }
 
         // The walk of a route in all, and on the floor of the character from the character.
