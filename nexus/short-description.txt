@@ -1,1 +1,1 @@
-One-click trap collection with a compact trap grid.
+Collect all trap prey in one click, see every trap in a compact grid, and replace broken traps.

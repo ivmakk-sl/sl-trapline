@@ -1,6 +1,9 @@
 // The apply pass over the CoreUI1 frame, its body observer, and the counts that check() reports.
 import { ensureStyle, findFrame } from './core';
+import { dropGoneCell, setCardWords, watchPointer } from './card';
+import { watchMenu } from './menu';
 import { applyGroups } from './grid';
+import { applyPin } from './pin';
 import { applyButton } from './takeAll';
 import type { CoreState, CoreWindow, Groups } from './types';
 import { word } from '../../Shared/i18n/web/words';
@@ -8,7 +11,8 @@ import { word } from '../../Shared/i18n/web/words';
 // The data of the last setData: the mod texts (undefined until C# sends them, and the button stays off
 // until then) and the floor groups (null until C# has pushed group data at least once, in which case the
 // grid stays off).
-export const view: { words: Record<string, string> | undefined; groups: Groups | null } = { words: undefined, groups: null };
+export const view: { words: Record<string, string> | undefined; groups: Groups | null; replace: boolean; pin: boolean } =
+  { words: undefined, groups: null, replace: false, pin: false };
 
 // The button, only once C# sent the mod texts: the page has no word of its own.
 function applyTakeAll(doc: Document, state: CoreState): string {
@@ -33,8 +37,14 @@ function apply(w: CoreWindow): string {
   const missing: string[] = [];
   try {
     const m1 = applyTakeAll(doc, state); if (m1) missing.push(m1);
-    const m2 = applyGroups(doc, state, view.groups); if (m2) missing.push(m2);
+    const m2 = applyGroups(doc, state, view.groups, view); if (m2) missing.push(m2);
+    const m3 = applyPin(w, state, view); if (m3) missing.push(m3);
   } catch (e) { return 'error: ' + e; }
+
+  setCardWords(view.words);
+  dropGoneCell(doc);
+  watchPointer(w);
+  watchMenu(w);
 
   if (!w.__traplineObserver) {
     const observer = new MutationObserver(() => {
@@ -47,7 +57,9 @@ function apply(w: CoreWindow): string {
         ensureStyle(doc);
         const s: CoreState = w.eval('state');
         applyTakeAll(doc, s);
-        applyGroups(doc, s, view.groups);
+        applyGroups(doc, s, view.groups, view);
+        applyPin(w, s, view);
+        dropGoneCell(doc);
       } catch (e) { /* a page update broke a part; the next setData() call reports it */ }
       finally { applying = false; }
     });

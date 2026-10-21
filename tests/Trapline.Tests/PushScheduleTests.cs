@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using Trapline;
 using Xunit;
@@ -198,5 +199,75 @@ public class PushScheduleTests
         Assert.Equal((7, 1), s.ObserverSum(70f, 0, 0));
         Assert.Null(s.ObserverSum(71f, 2, 2));
         Assert.Equal((2, 2), s.ObserverSum(130f, 0, 0));
+    }
+
+    // The data of one trap cell with its durability mark, as TrapGroups builds it.
+    private static string Groups(int? mark, bool replace = false, bool pin = false) => PageJson.DataJson(new Dictionary<string, string> { ["takeAll"] = "Take All" }, PageJson.GroupsJson(1, 2,
+        new System.Collections.Generic.List<PageJson.Line> { new PageJson.Line { Key = "f1", Floor = true, Row = 1, Name = "Home" } },
+        new System.Collections.Generic.List<PageJson.Cell> { new PageJson.Cell { Slot = "a", Row = 2, Column = 1, Trap = 7, Mark = mark } }), replace, pin);
+
+    [Fact]
+    public void A_changed_durability_mark_gives_one_data_push()
+    {
+        var s = new PushSchedule();
+        var d = new Data { Json = Groups(null) };
+        s.Tick(10f, true, d.Build);
+
+        // A pickup wears the trap to 2 pickups left: the Postfix marks the groups dirty, and the mark shows.
+        d.Json = Groups(40);
+        Assert.Equal(Push(Groups(40)), s.Tick(10.1f, true, d.Build));
+        // Another trigger in a later frame with the same mark pushes nothing.
+        Assert.Equal(None, s.Tick(10.2f, true, d.Build));
+    }
+
+    [Fact]
+    public void A_pickup_that_leaves_the_mark_as_it_was_gives_no_data_push()
+    {
+        var s = new PushSchedule();
+        var d = new Data { Json = Groups(null) };
+        s.Tick(10f, true, d.Build);
+
+        Assert.Equal(None, s.Tick(10.1f, true, d.Build));
+    }
+
+    [Fact]
+    public void A_click_on_the_Auto_replace_checkbox_gives_one_data_push()
+    {
+        var s = new PushSchedule();
+        var d = new Data { Json = Groups(null) };
+        s.Tick(10f, true, d.Build);
+
+        // TRAPLINE_REPLACE writes the save key and marks the groups dirty.
+        d.Json = Groups(null, true);
+        Assert.Equal(Push(Groups(null, true)), s.Tick(10.1f, true, d.Build));
+        Assert.Equal(None, s.Tick(10.2f, true, d.Build));
+    }
+
+    [Fact]
+    public void A_click_on_the_pin_gives_one_data_push()
+    {
+        var s = new PushSchedule();
+        var d = new Data { Json = Groups(null) };
+        s.Tick(10f, true, d.Build);
+
+        // TRAPLINE_PIN writes the config entry and marks the groups dirty.
+        d.Json = Groups(null, false, true);
+        Assert.Equal(Push(Groups(null, false, true)), s.Tick(10.1f, true, d.Build));
+        Assert.Equal(None, s.Tick(10.2f, true, d.Build));
+    }
+
+    [Fact]
+    public void A_card_or_a_menu_send_gives_no_data_push()
+    {
+        var s = new PushSchedule();
+        var d = new Data { Json = Groups(null) };
+        s.Tick(10f, true, d.Build);
+        int builds = d.Calls;
+
+        // TRAPLINE_CARD and TRAPLINE_MENU answer through PageScript.Send with their own commands and mark nothing dirty.
+        Assert.StartsWith("window.__trapline?window.__trapline.setCard(", PageJson.SetCardCommand("{}"));
+        Assert.StartsWith("window.__trapline?window.__trapline.setMenu(", PageJson.SetMenuCommand("{}"));
+        Assert.Equal(None, s.Tick(10.1f, false, d.Build));
+        Assert.Equal(builds, d.Calls);
     }
 }

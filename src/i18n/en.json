@@ -1,3 +1,7 @@
 {
-  "takeAll": "Take All"
+  "takeAll": "Take All",
+  "freeSlot": "Free trap slot",
+  "freeSlotHint": "Click: set a trap",
+  "autoReplace": "Auto-replace",
+  "autoReplaceTip": "A broken trap is replaced by a trap of the same kind from the backpack or home storage."
 }

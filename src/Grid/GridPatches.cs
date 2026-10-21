@@ -1,6 +1,7 @@
 using System;
 using HarmonyLib;
 using GameCore.HotUpdate;
+using GameCore.HotUpdate.Battle.Logic;
 using GameCore.HotUpdate.ReduxUI;
 
 namespace Trapline
@@ -72,6 +73,36 @@ namespace Trapline
     // reads the words of the new language however long the load took.
     [HarmonyPatch(typeof(SentryLanguageTags), "Apply")]
     internal static class GridOnLanguageApplied
+    {
+        private static void Postfix()
+        {
+            TrapGroups.MarkDirty();
+        }
+    }
+
+    // A pickup of a storage box, a take from it in the trap window, and its Take All wear the trap: the durability mark
+    // can change. Each Postfix only marks the groups dirty, so the one push of the next frame covers each wear.
+    // OnPickupTrapPrey marks them in TakeAllOnPickupTrapPrey.
+    [HarmonyPatch(typeof(TrapManager), "PickupCagePrey")]
+    internal static class GridOnPickupCagePrey
+    {
+        private static void Postfix()
+        {
+            TrapGroups.MarkDirty();
+        }
+    }
+
+    [HarmonyPatch(typeof(TrapManager), "OnTakeTrapStoreItem")]
+    internal static class GridOnTakeTrapStoreItem
+    {
+        private static void Postfix()
+        {
+            TrapGroups.MarkDirty();
+        }
+    }
+
+    [HarmonyPatch(typeof(TrapManager), "OnTakeAllTrapStore")]
+    internal static class GridOnTakeAllTrapStore
     {
         private static void Postfix()
         {

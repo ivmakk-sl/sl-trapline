@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
-    "test": "vite build && vitest run",
+    "build": "vite build --mode page && vite build --mode trappanel",
+    "test": "npm run build && vitest run",
     "lint": "stylelint \"src/**/*.css\"",
     "typecheck": "tsc --noEmit",
     "dev": "vite --config tests/dev/vite.config.ts"

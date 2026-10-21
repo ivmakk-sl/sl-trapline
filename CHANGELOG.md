@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [1.2.0] - 2026-10-21
 
+### Added
+
+- The trap grid shows a line with the name of each floor, and on a floor with two zones a line with the name of the second zone over its cells (the zone changes what a trap catches). The cells start at the left edge, up to 8 on a line.
+- Point at a trap cell to see the game's trap card: the trap name, the durability, the bait, and the prey.
+- A trap that the next pickup will break shows a red cell.
+- Click an empty cell to set a trap there: a menu lists each kind of trap in your backpack and home storage with its count, and your character sets the one you pick with the game's normal action.
+- Auto-replace (a checkbox on the last line of the open trap list, off by default): when a trap breaks, your character sets a new trap of the same kind on its Trap Slot right after the pickup, from the backpack first, else from home storage. The trap window of each trap has an Auto-replace checkbox for its Trap Slot, on by default. Both are kept in the save.
+- A pin on the last line of the open trap list keeps the list open when you open the plant list or the search, or press Escape. Click the arrow of the list header to unpin it.
+
 ### Changed
 
 - Take All walks the shortest route: on each floor it takes the order with the shortest walk through all traps with prey, measured along the paths your character really walks, around walls and furniture. After your floor, it goes on to the floor that the stairs reach first from the floor before.

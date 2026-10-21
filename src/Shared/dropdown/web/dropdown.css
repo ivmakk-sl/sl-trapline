@@ -1,0 +1,118 @@
+/* Library copy of shared/dropdown 1.1.0. Do not edit: see src/Shared/dropdown/VERSION. */
+/* The dropdown of a sort, below a grid. PFX is the prefix of the mod; dropdownCss(prefix) replaces it. The mod sets
+   these variables in its tokens.css:
+     --PFX-fg       the text and the icons; the frame and the button background derive from it
+     --PFX-accent   the gold of the active look, the hover frame, and the current choice
+     --PFX-menu-bg  the solid background of the open list
+   The colors of single icons ([data-choice="<key>"] on .PFX-ico) stay with the mod. */
+
+/* At the left end of the line of the game button, as high as that line, so the button has the height of the game
+   button in each window; the button fills it (the default stretch of a flex item). */
+.PFX {
+  position: relative;
+  margin-right: auto;
+  align-self: stretch;
+  display: flex;
+}
+
+/* In a toolbar with the robot switch: the end of the line of the switch. */
+.PFX-break {
+  flex-basis: 100%;
+  height: 0;
+}
+
+.PFX-btn,
+.PFX-opt {
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--PFX-fg);
+  white-space: nowrap;
+  background: rgb(from var(--PFX-fg) r g b / 6%);
+  border: 1px solid rgb(from var(--PFX-fg) r g b / 15%);
+  border-radius: 4px;
+  padding: 4px 10px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* A choice other than Default is on: a gold frame and gold text, so the player sees that the grid is not in its
+   real order. */
+.PFX-btn.PFX-active {
+  color: var(--PFX-accent);
+  border-color: rgb(from var(--PFX-accent) r g b / 75%);
+  background: rgb(from var(--PFX-accent) r g b / 14%);
+}
+
+.PFX-ico {
+  display: inline-flex;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--PFX-fg);
+}
+
+.PFX-ico > svg {
+  width: 100%;
+  height: 100%;
+}
+
+.PFX-btn:hover,
+.PFX-opt:hover {
+  border-color: rgb(from var(--PFX-accent) r g b / 60%);
+}
+
+/* The list opens above the button, so it does not cover the grid below the toolbar. */
+.PFX-menu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 4px);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 4px;
+  background: var(--PFX-menu-bg);
+  border: 1px solid rgb(from var(--PFX-fg) r g b / 15%);
+}
+
+.PFX-menu[hidden] {
+  display: none;
+}
+
+.PFX-opt.PFX-on {
+  color: var(--PFX-accent);
+}
+
+/* The list under an anchor: fixed at the place that the script sets, above the HUD panels, and as wide as its longest
+   choice. */
+.PFX.PFX-anchored {
+  position: fixed;
+  z-index: 9999;
+  margin: 0;
+  display: block;
+}
+
+.PFX-anchored > .PFX-menu {
+  position: static;
+}
+
+/* The count of a choice at its right end. */
+.PFX-count {
+  margin-left: auto;
+  padding-left: 12px;
+  color: rgb(from var(--PFX-fg) r g b / 70%);
+}
+
+/* A choice that calls nothing. */
+.PFX-opt.PFX-dim {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.PFX-opt.PFX-dim:hover {
+  border-color: rgb(from var(--PFX-fg) r g b / 15%);
+}

@@ -11,11 +11,17 @@
   <ItemGroup>
     <Compile Include="..\..\src\TakeAll\RouteLogic.cs" Link="RouteLogic.cs" />
     <Compile Include="..\..\src\Grid\GridLogic.cs" Link="GridLogic.cs" />
+    <Compile Include="..\..\src\Grid\DurabilityLogic.cs" Link="DurabilityLogic.cs" />
+    <Compile Include="..\..\src\Card\CardLogic.cs" Link="CardLogic.cs" />
+    <Compile Include="..\..\src\SetTrap\MenuLogic.cs" Link="MenuLogic.cs" />
+    <Compile Include="..\..\src\Replace\ReplaceLogic.cs" Link="ReplaceLogic.cs" />
+    <Compile Include="..\..\src\Replace\SaveKeyLogic.cs" Link="SaveKeyLogic.cs" />
     <Compile Include="..\..\src\Web\PageJson.cs" Link="PageJson.cs" />
     <Compile Include="..\..\src\Web\PushSchedule.cs" Link="PushSchedule.cs" />
     <Compile Include="..\..\src\Shared\json\cs\*.cs" Link="Shared\json\%(Filename)%(Extension)" />
     <Compile Include="..\..\src\Shared\i18n\cs\*.cs" Link="Shared\i18n\%(Filename)%(Extension)" />
     <Compile Include="..\..\src\Shared\route\cs\*.cs" Link="Shared\route\%(Filename)%(Extension)" />
+    <Compile Include="..\..\src\Shared\floor-grid\cs\*.cs" Link="Shared\floor-grid\%(Filename)%(Extension)" />
     <EmbeddedResource Include="..\..\src\i18n\*.json" LogicalName="Trapline.i18n.%(Filename)%(Extension)" />
     <None Include="..\fixtures\*.json" Link="fixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

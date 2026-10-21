@@ -1,0 +1,48 @@
+/* Library copy of shared/hud-pin 1.0.0. Do not edit: see src/Shared/hud-pin/VERSION. */
+/* The pin of a HUD list, in the look of the game's lock of the Survival Planning cards. PFX is the prefix of the mod;
+   hudPinCss(prefix) replaces it. The mod sets these variables in its tokens.css:
+     --PFX-pin-color      the color of the lock when not pinned
+     --PFX-pin-on-bg      the chip behind the lock when pinned
+     --PFX-pin-on-color   the color of the lock on the chip
+   The size follows the font size of the place of the pin: a button does not inherit it by itself (Chromium gives it
+   13.33px), so the rule sets it. */
+.PFX-pin {
+  font-size: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2em;
+  height: 1.2em;
+  box-sizing: border-box;
+  padding: 0.1em;
+  margin: 0;
+  border: 0;
+  border-radius: 0.2em;
+  background: transparent;
+  color: var(--PFX-pin-color);
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.PFX-pin:hover,
+.PFX-pin.PFX-pin-on {
+  opacity: 1;
+}
+
+.PFX-pin.PFX-pin-on {
+  background: var(--PFX-pin-on-bg);
+  color: var(--PFX-pin-on-color);
+}
+
+.PFX-pin > svg {
+  width: 100%;
+  height: 100%;
+}
+
+.PFX-pin.PFX-pin-on .PFX-pin-open {
+  display: none;
+}
+
+.PFX-pin:not(.PFX-pin-on) .PFX-pin-shut {
+  display: none;
+}

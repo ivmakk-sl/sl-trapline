@@ -1,0 +1,6 @@
+# Library copy of shared/floor-grid. Do not edit it: edit shared/floor-grid/, then run tools/shared-sync.ps1 -Mod Trapline -Lib floor-grid.
+name=floor-grid
+version=1.0.0
+sha256 cs/FloorGridLayout.cs 1c8e143d80cb2bbaaafb2a68cc7cfadcb07dba446542314d6c41ac48f22a8dbe
+sha256 web/floorGrid.css 6fdfd77ec1510c919564190599fb147df4f7dad31e1c294c1417a0d29c10a97c
+sha256 web/floorGrid.ts 1e67a9c19d2d5913c44a259785ef0b7f906955dda4270f4c74b2e4e6288f6b1f

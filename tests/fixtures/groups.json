@@ -1,8 +1,67 @@
 {
-  "floors": [
-    { "id": 1, "label": "Home", "traps": 3, "slots": 3 },
-    { "id": 101, "label": "The \"Cellar\"", "traps": 1, "slots": 2 }
+  "cols": 3,
+  "rows": 7,
+  "lines": [
+    {
+      "key": "f1",
+      "kind": "floor",
+      "row": 1,
+      "name": "Home"
+    },
+    {
+      "key": "z1:7",
+      "kind": "zone",
+      "row": 2,
+      "name": "Warehouse Interior"
+    },
+    {
+      "key": "z1:8",
+      "kind": "zone",
+      "row": 4,
+      "name": "Outdoors"
+    },
+    {
+      "key": "f101",
+      "kind": "floor",
+      "row": 6,
+      "name": "The \"Cellar\""
+    }
   ],
-  "trapFloor": { "11": 1, "12": 101, "13": 1, "14": 1 },
-  "trapCell": { "11": 0, "12": 1, "13": 2 }
+  "cells": [
+    {
+      "slot": "WarehousePos91",
+      "row": 3,
+      "col": 1,
+      "trap": 11
+    },
+    {
+      "slot": "WarehousePos92",
+      "row": 3,
+      "col": 2
+    },
+    {
+      "slot": "WarehousePos93",
+      "row": 3,
+      "col": 3,
+      "trap": 13,
+      "mark": 25
+    },
+    {
+      "slot": "WarehousePos99",
+      "row": 5,
+      "col": 1,
+      "trap": 15
+    },
+    {
+      "slot": "CellarPos19",
+      "row": 7,
+      "col": 1,
+      "trap": 12
+    },
+    {
+      "slot": "CellarPos20",
+      "row": 7,
+      "col": 2
+    }
+  ]
 }

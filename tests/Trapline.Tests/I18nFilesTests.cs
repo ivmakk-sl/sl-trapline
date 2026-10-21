@@ -27,6 +27,28 @@ public class I18nFilesTests
         Assert.Equal("全部拾取", texts.For(0, null, null)["takeAll"]);
     }
 
+    // The card of a free trap slot (design A7) in both languages.
+    [Fact]
+    public void TheFreeSlotCardTextsAreInBothLanguages()
+    {
+        var texts = I18nTexts.Load(Assembly, "Trapline");
+        Assert.Equal("Free trap slot", texts.For(1, null, null)["freeSlot"]);
+        Assert.Equal("Click: set a trap", texts.For(1, null, null)["freeSlotHint"]);
+        Assert.Equal("空陷阱位", texts.For(0, null, null)["freeSlot"]);
+        Assert.Equal("点击：安装陷阱", texts.For(0, null, null)["freeSlotHint"]);
+    }
+
+    // The Auto-replace checkbox and its hover tip in both languages (design A19).
+    [Fact]
+    public void TheAutoReplaceTextsAreInBothLanguages()
+    {
+        var texts = I18nTexts.Load(Assembly, "Trapline");
+        Assert.Equal("Auto-replace", texts.For(1, null, null)["autoReplace"]);
+        Assert.Equal("A broken trap is replaced by a trap of the same kind from the backpack or home storage.", texts.For(1, null, null)["autoReplaceTip"]);
+        Assert.Equal("自动补装", texts.For(0, null, null)["autoReplace"]);
+        Assert.Equal("陷阱损坏后，从背包或家中储物柜取同类陷阱自动补装。", texts.For(0, null, null)["autoReplaceTip"]);
+    }
+
     // With a game text for the key, the button shows the game's own word.
     [Fact]
     public void TheTakeAllWordIsTheGameTextOfItsKey()

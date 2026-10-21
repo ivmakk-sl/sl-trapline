@@ -1,4 +1,4 @@
-Checking every trap by hand means a click on each trap, a walk, and a panel each time. Trapline adds one "Take All" button to the HUD trap list, and turns the open list into a compact grid that shows all your traps, free slots, and prey at a glance.
+Checking every trap by hand means a click on each trap, a walk, and a panel each time, and a broken trap leaves its slot empty until you notice. Trapline adds one "Take All" button to the HUD trap list, turns the open list into a compact grid of your traps, free slots, and prey by floor and zone, and can set and replace traps from that grid.
 
 Fun fact: a [url=https://en.wikipedia.org/wiki/Trapline]trapline[/url] is a route a trapper follows to set and check traps. Now your character has one too.
 
@@ -7,11 +7,16 @@ Fun fact: a [url=https://en.wikipedia.org/wiki/Trapline]trapline[/url] is a rout
 [*][b]Take All.[/b] The button shows in the header of the trap list when at least one trap has prey. A click queues the game's normal pickup action for each trap with prey. The character walks to each trap, and each pickup takes its normal time. No instant prey, no extra EXP.[/*]
 [*][b]Auto Trap Cage.[/b] Take All also takes the prey in the storage box of an Auto Trap Cage, with the game's own pickup of the "Collect All" button. If the bag has room for only a part of the prey, the rest stays in the storage box and the route stops there.[/*]
 [*][b]Short walking route.[/b] The mod plans the order of the traps for the shortest walk. It clears your current floor first, then goes on to the floor that the stairs reach first from there, and so on. On each floor it picks the order with the shortest walk through all traps with prey, measured along the paths your character really walks, around walls and furniture.[/*]
-[*][b]Compact trap grid.[/b] The open trap list shows one line for each floor, with one cell for each trap slot you can use now. A cell shows the trap icon, or it is empty for a free slot. A trap with prey has a gold border and a gold dot. A Stopped Auto Trap Cage has a red border and a red dot. A trap with more than one prey shows the game's count as a small badge. Each trap keeps its cell while the usable slots on that floor stay the same. A click on a trap cell does the same as a click on that trap in the game's list.[/*]
+[*][b]Compact trap grid.[/b] The open trap list shows a line with each floor name and, under it, one cell for each Trap Slot you can use now. A floor with two zones also shows a line with the name of its second zone, since the zone changes what a trap catches (Outdoors on the Warehouse Manager's Home floor, Balcony on the Wage Slave's 2nd Floor). A cell shows the trap icon, or it is empty for a free slot. A trap with prey has a gold border and a gold dot. A Stopped Auto Trap Cage has a red border and a red dot. A trap with more than one prey shows the game's count as a small badge. A click on a trap cell does the same as a click on that trap in the game's list.[/*]
+[*][b]Trap card.[/b] Point at a trap cell to see the game's trap card next to it: the trap name, the durability, the bait, and the prey.[/*]
+[*][b]Low durability.[/b] When the next pickup will break a trap, its cell turns red, counted with the wear of one pickup at your trapping level.[/*]
+[*][b]Set a trap from the grid.[/b] Click an empty cell: a menu lists each kind of trap in your backpack and home storage with its count. Pick one, and your character walks there and sets it with the game's normal action and time, from the backpack first, else from home storage.[/*]
+[*][b]Auto-replace.[/b] Turn it on with the checkbox on the last line of the list (off by default). When a trap breaks, your character sets a new trap of the same kind on the same Trap Slot right after that pickup, before the next pickup of a Take All route, from the backpack first, else from home storage. With no trap of that kind, the slot stays free. To leave one Trap Slot out, clear the Auto-replace checkbox in the header of its trap window.[/*]
+[*][b]Pin.[/b] The pin at the right end of the last line keeps the list open when you open the plant list or the search, or press Escape. Click the arrow of the list header to unpin it.[/*]
 [*][b]English and Chinese.[/b][/*]
 [/list]
 
-Trapline does not rebait a trap after collecting it. Rebait by hand, as usual.
+Trapline does not rebait a trap after collecting it. Rebait by hand, as usual. The Auto-replace settings are small values in your save, which the game ignores if you remove the mod.
 
 [size=5]Compatibility[/size]
 Do not install Trapline together with [url=https://www.nexusmods.com/survivallog/mods/6]TrapPickAll[/url]. Both mods change how trap prey is collected. The difference: TrapPickAll replaces the pickup, and Trapline only automates it. Trapline puts the game's normal pickup action in the queue of the character, one for each trap. The walk, the pickup time, and the rewards are the same as when you collect by hand.

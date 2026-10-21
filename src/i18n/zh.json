@@ -1,3 +1,7 @@
 {
-  "takeAll": "全部拾取"
+  "takeAll": "全部拾取",
+  "freeSlot": "空陷阱位",
+  "freeSlotHint": "点击：安装陷阱",
+  "autoReplace": "自动补装",
+  "autoReplaceTip": "陷阱损坏后，从背包或家中储物柜取同类陷阱自动补装。"
 }

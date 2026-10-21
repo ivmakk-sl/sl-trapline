@@ -7,22 +7,26 @@
     <Version>1.2.0</Version>
   </PropertyGroup>
 
-  <!-- The page script is built from src/Web/ by Vite (package.json at the mod root) into one file,
-       which the plugin embeds under one name. The build runs only when a page source changed. -->
+  <!-- The page scripts are built from src/Web/ by Vite (package.json at the mod root) into two files: page.js (the HUD
+       trap list) and trappanel.js (the trap window), which the plugin embeds. The build runs only when a page source
+       changed. -->
   <PropertyGroup>
     <ModRoot>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))</ModRoot>
     <PageBundle>$(ModRoot)\obj\page\page.js</PageBundle>
+    <TrapPanelBundle>$(ModRoot)\obj\page\trappanel.js</TrapPanelBundle>
   </PropertyGroup>
 
   <ItemGroup>
     <PageSource Include="Web\**\*.ts;Web\**\*.js;Web\**\*.css" />
+    <PageSource Include="Shared\**\web\**" />
     <PageSource Include="$(ModRoot)\package.json;$(ModRoot)\package-lock.json;$(ModRoot)\vite.config.ts" />
     <EmbeddedResource Include="$(PageBundle)" LogicalName="Trapline.page.js" />
+    <EmbeddedResource Include="$(TrapPanelBundle)" LogicalName="Trapline.trappanel.js" />
     <!-- The i18n files of the mod texts, read by the i18n library copy. -->
     <EmbeddedResource Include="i18n\*.json" LogicalName="Trapline.i18n.%(Filename)%(Extension)" />
   </ItemGroup>
 
-  <Target Name="BuildPage" BeforeTargets="BeforeBuild" Inputs="@(PageSource)" Outputs="$(PageBundle)">
+  <Target Name="BuildPage" BeforeTargets="BeforeBuild" Inputs="@(PageSource)" Outputs="$(PageBundle);$(TrapPanelBundle)">
     <Error Condition="!Exists('$(ModRoot)\node_modules')" Text="Trapline: the npm packages are missing. Run npm ci in $(ModRoot) first." />
     <Exec Command="npm run build" WorkingDirectory="$(ModRoot)" />
   </Target>

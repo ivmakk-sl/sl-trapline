@@ -10,5 +10,5 @@
     "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["src/Web/page/**/*.ts", "tests/page/**/*.ts", "tests/dev/**/*.ts", "vite.config.ts"]
+  "include": ["src/Web/page/**/*.ts", "src/Web/trappanel/**/*.ts", "src/Shared/**/web/*.ts", "tests/page/**/*.ts", "tests/dev/**/*.ts", "vite.config.ts"]
 }

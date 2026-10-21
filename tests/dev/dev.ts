@@ -4,13 +4,14 @@ import '../../src/Web/page/main';
 import type { PageData } from '../../src/Web/page/types';
 import data from '../fixtures/data.json';
 
-// The traps of tests/fixtures/data.json: 11 (with prey) and 13 on Home, 12 in The "Cellar", and 14 with
-// no cell, which goes to the line after all floors.
+// The traps of tests/fixtures/data.json: 11 (with prey) and 13 in Warehouse Interior and 15 in Outdoors on the floor
+// Home, 12 in The "Cellar", and 14 with no cell, which goes to the line after all rows.
 const traps = [
   { trapInstanceId: 11, trapName: 'Snare', roomName: 'Balcony', iconUrl: '', status: 1 },
   { trapInstanceId: 12, trapName: 'Snare', roomName: 'Cellar', iconUrl: '', status: 0 },
   { trapInstanceId: 13, trapName: 'Snare', roomName: 'Garden', iconUrl: '', status: 2 },
   { trapInstanceId: 14, trapName: 'Snare', roomName: 'Roof', iconUrl: '', status: 0 },
+  { trapInstanceId: 15, trapName: 'Snare', roomName: 'Outdoors', iconUrl: '', status: 0 },
 ];
 
 const frame = document.querySelector('iframe')!;
