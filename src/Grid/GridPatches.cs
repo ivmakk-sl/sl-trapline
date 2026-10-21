@@ -64,4 +64,18 @@ namespace Trapline
             TrapGroups.MarkDirty();
         }
     }
+
+    // The end of a language switch. ApplyLanguageKey awaits EnsureDualLanguageLoaded and the load of a
+    // community pack (ResolveCommunityPack), which can take more than the one frame above; its state
+    // machine (<ApplyLanguageKey>d__300.MoveNext) calls SentryLanguageTags.Apply, its only caller, after it
+    // sets LanguageType and LanguageMap on each path (Chinese, English, community pack). Marking here
+    // reads the words of the new language however long the load took.
+    [HarmonyPatch(typeof(SentryLanguageTags), "Apply")]
+    internal static class GridOnLanguageApplied
+    {
+        private static void Postfix()
+        {
+            TrapGroups.MarkDirty();
+        }
+    }
 }

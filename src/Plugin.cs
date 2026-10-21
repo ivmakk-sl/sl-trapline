@@ -37,6 +37,7 @@ namespace Trapline
                          typeof(GridOnRebuildFloorButtons),
                          typeof(GridOnFloorRefreshTags),
                          typeof(GridOnApplyLanguageKey),
+                         typeof(GridOnLanguageApplied),
                          typeof(FramePatch),
                      })
             {
