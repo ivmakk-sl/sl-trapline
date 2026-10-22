@@ -1,6 +1,18 @@
 # Trapline
 
-A mod for the Steam game *Survival Log* that collects the prey of all your traps with one click, shows your traps in a compact grid, and can replace a trap that breaks. In the HUD trap list, a "Take All" button (the game's own word) shows in the header row when at least one trap has prey. A click queues the game's normal pickup action for each trap that has prey: the character walks to each trap and each pickup takes its normal game time, the same as clicking a trap by hand, opening its panel, and pressing collect. Actions already queued run before the pickups. A second click before the route finishes adds no duplicate pickup.
+A mod for the Steam game *Survival Log*. Checking traps by hand means a click, a walk, and a panel for each trap. Trapline does it in one click and shows all your traps in a compact grid. Walks, action times, and rewards stay the same as by hand.
+
+- **Take All.** One click collects every trap with prey, also Auto Trap Cages, along the shortest walk: your floor first, then the next one by the stairs.
+- **Trap grid.** Your traps and free Trap Slots by floor and zone. Gold marks prey, and red marks a trap that breaks at its next pickup. Point at a cell for the game's trap card, and pin the list to keep it open.
+- **Set and replace traps.** Click + on a free slot to set a trap from your backpack or home storage. Auto-replace (on by default) sets a new trap of the same kind when one breaks.
+
+Trapline does not rebait traps. The Auto-replace settings are small values in your save, which the game ignores if you remove the mod.
+
+Nexus page: https://www.nexusmods.com/survivallog/mods/15
+
+## Details
+
+In the HUD trap list, a "Take All" button (the game's own word) shows in the header row when at least one trap has prey. A click queues the game's normal pickup action for each trap that has prey: the character walks to each trap and each pickup takes its normal game time, the same as clicking a trap by hand, opening its panel, and pressing collect. Actions already queued run before the pickups. A second click before the route finishes adds no duplicate pickup.
 
 A trap has prey when prey is in the trap, or when prey is in the storage box of an Auto Trap Cage. At an Auto Trap Cage, the pickup is the game's own pickup of the storage box, the same as the game's "Collect All" button in the trap window: the character takes the prey of the storage box and the prey in the cage.
 
@@ -18,17 +30,17 @@ Trapline replaces each trap that breaks. Right after the pickup that broke it, y
 
 The pin at the right end of the last line keeps the list open: a pinned list stays open when you open the plant list or the search, or press Escape. Click the arrow of the list header to unpin and close it. The pin stays after a restart and for each save.
 
-Trapline does not rebait a trap after collecting it. Rebait by hand, as usual. The mod writes and changes no file of the game install, and it does not change the traps or the prey. It keeps the Auto-replace settings as small values in your save, which the game ignores when you remove the mod.
-
-Nexus page: https://www.nexusmods.com/survivallog/mods/15
+The mod writes and changes no file of the game install, and it does not change the traps or the prey.
 
 ## Compatibility
 
-Do not install Trapline together with [TrapPickAll](https://www.nexusmods.com/survivallog/mods/6). Both mods change how trap prey is collected. The difference: TrapPickAll replaces the pickup, and Trapline only automates it. Trapline puts the game's normal pickup action in the queue of the character, one for each trap. The walk, the pickup time, and the rewards are the same as when you collect by hand.
+Not compatible:
+
+- [TrapPickAll](https://www.nexusmods.com/survivallog/mods/6): it replaces the game's trap pickup with its own, and Trapline queues the game's normal pickup. Use one of the two.
 
 ## Requirements
 
-- Survival Log 1.1.18599 (the 10/13 Update) or later.
+- Survival Log 1.1.18599 or later.
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
 
 ## Install
