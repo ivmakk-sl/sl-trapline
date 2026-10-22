@@ -24,4 +24,4 @@ Tracks the mod's Nexus page details.
 - Full description: `description.bbcode` (paste into the editor's raw BBCode mode).
 - Changelog: `changelog.txt`, newest block first. For an upload, paste only the category lines of the new version, not its header line.
 - Background: `images/banner.jpg` (1300x372). Set as the mod page background.
-- Gallery images (1920x1080): `images/sl-trapline-thumbnail.jpg` (title card, pick as the mods-grid thumbnail) and `images/sl-trapline-comparison.jpg` (the game's trap list and the Trapline grid, same save). See `images/README.md` for each role.
+- Gallery images (1920x1080): `images/sl-trapline-thumbnail.jpg` (title card, pick as the mods-grid thumbnail), `images/sl-trapline-auto-replace.jpg` (the red cell and Auto-replace), `images/sl-trapline-set-trap.jpg` (the Set Trap menu), and `images/sl-trapline-comparison.jpg` (the game's trap list and the Trapline grid, same save). See `images/README.md` for each role.
