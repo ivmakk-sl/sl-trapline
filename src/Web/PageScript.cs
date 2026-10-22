@@ -78,6 +78,18 @@ namespace Trapline
             }));
         }
 
+        // Sends one call of the page script that is not a data push (a trap card, a menu). With no page script in the root
+        // page it does nothing: the next check of TrapGroups sends the script again.
+        public static void Send(string command, string what)
+        {
+            var webView = WebView();
+            if (webView == null) return;
+            webView.ExecuteJavaScript(command, (Il2CppSystem.Action<string>)(r =>
+            {
+                if (Plugin.Verbose.Value && r != "ok") Plugin.Log.LogDebug($"Trapline {what}: result={r}");
+            }));
+        }
+
         private static void SendWithScript(string json, string summary)
         {
             var webView = WebView();

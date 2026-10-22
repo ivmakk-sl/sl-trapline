@@ -2,13 +2,20 @@
 // write of an inline style.
 import tokensCss from '../tokens.css?inline';
 import pageCss from '../page.css?inline';
+import { floorGridCss } from '../../Shared/floor-grid/web/floorGrid';
+import { dropdownCss } from '../../Shared/dropdown/web/dropdown';
+import { hudPinCss } from '../../Shared/hud-pin/web/hudPin';
 import type { CoreState, CoreWindow } from './types';
+
+// The prefix of the dropdown library for the Set Trap menu: its classes are trapline-menu-*.
+export const MENU_PREFIX = 'trapline-menu';
 
 // The game selectors that each feature needs. A missing one is reported as a missing part, so a game
 // update shows in the log and in the page tests.
 export const FEATURES = {
   button: ['.trap-toggle-row', '.trap-toggle-chevron'],
-  groups: ['.trap-popover', '.trap-item-row', '.trap-item-name', '.trap-item-status', '.trap-item-icon-img']
+  groups: ['.trap-popover', '.trap-item-row', '.trap-item-name', '.trap-item-status', '.trap-item-icon-img'],
+  pin: ['.trap-toggle-row', '.trap-toggle-chevron']
 };
 
 export function partsMissing(doc: Document, feature: keyof typeof FEATURES): string[] {
@@ -34,12 +41,18 @@ export function setStyle(el: HTMLElement, prop: string, value: string): void {
   if (el.style.getPropertyValue(prop) !== value) el.style.setProperty(prop, value);
 }
 
-// The one style node of the mod in the frame: the tokens, then the rules.
+// Sends exactly what the page's own UnitySendEvent would send from the CoreUI1 frame: this script runs in the root
+// page, so its own window is the parent of the frame.
+export function post(type: string, data: object): void {
+  window.postMessage({ type, data, sourcePageId: 'CoreUI1' }, '*');
+}
+
+// The one style node of the mod in the frame: the tokens, the rules of the libraries, then the rules of the mod.
 export function ensureStyle(doc: Document): void {
   if (doc.getElementById('trapline-style')) return;
   const style = doc.createElement('style');
   style.id = 'trapline-style';
-  style.textContent = tokensCss + '\n' + pageCss;
+  style.textContent = tokensCss + '\n' + floorGridCss('tl') + '\n' + dropdownCss(MENU_PREFIX) + '\n' + hudPinCss('tl') + '\n' + pageCss;
   doc.head.appendChild(style);
 }
 

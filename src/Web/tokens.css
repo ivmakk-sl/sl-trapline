@@ -7,6 +7,8 @@
   --tl-gold: #ffc107;
   /* The color of the game's is-halted border (a Stopped Auto Trap Cage). */
   --tl-red: #e57373;
+  /* The red of the game's durability bar at 20% or less (TrapFloatPopup.html): the durability mark of a cell. */
+  --tl-mark: var(--tl-dura-low);
 
   /* The frame and the background of a cell of the trap grid. */
   --tl-cell-border: rgb(from var(--tl-white) r g b / 15%);
@@ -15,4 +17,39 @@
 
   /* The background of the prey count badge in a cell. */
   --tl-badge-bg: rgb(from var(--tl-black) r g b / 70%);
+
+  /* The trap card: the background of the game's tooltip (.entry-tip) and its line, as Greenline's pot card. */
+  --tl-tip: #0f0f0f;
+  --tl-tip-line: rgb(from var(--tl-white) r g b / 22%);
+
+  /* The colors of the game's trap card (TrapFloatPopup.html): the name, the texts, and the durability bar. */
+  --tl-card-name: #ffc107;
+  --tl-card-label: #ccc;
+  --tl-card-value: #eee;
+  --tl-card-muted: #888;
+  --tl-card-active: #ddd;
+  --tl-dura-high: #7bd88a;
+  --tl-dura-medium: #f5b342;
+  --tl-dura-low: #ff8a80;
+
+  /* The Set Trap menu in the look of the dropdown library (prefix trapline-menu), as the sort dropdowns of Project Cook
+     and Better Trade. */
+  --trapline-menu-fg: var(--tl-white);
+  --trapline-menu-accent: var(--tl-gold);
+  --trapline-menu-menu-bg: #1d1e22;
+
+  /* The pin of the trap list (the HUD pin library, prefix tl): white, so it draws less eye than the gold of the list. */
+  --tl-pin-color: var(--tl-white);
+
+  /* The floor lines and zone lines of the floor grid library (prefix tl). */
+  --tl-fg-cell: 22px;
+  --tl-fg-gap: 3px;
+  --tl-fg-max-cols: 8;
+  --tl-fg-floor-color: rgb(from var(--tl-gold) r g b / 85%);
+  --tl-fg-zone-color: rgb(from var(--tl-white) r g b / 70%);
+  --tl-fg-floor-size: 7px;
+  --tl-fg-zone-size: 6.5px;
+  /* page.css hides the rule of a line. */
+  --tl-fg-rule: rgb(from var(--tl-white) r g b / 18%);
+  --tl-fg-rule-width: 1px;
 }

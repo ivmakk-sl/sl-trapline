@@ -44,15 +44,7 @@ public class PageCommandTests
     [Fact]
     public void DataJson_matches_the_fixture()
     {
-        var floors = new List<PageJson.Floor>
-        {
-            new PageJson.Floor { Id = 1, Label = "Home", Traps = 3, Slots = 3 },
-            new PageJson.Floor { Id = 101, Label = "The \"Cellar\"", Traps = 1, Slots = 2 },
-        };
-        var trapFloor = new Dictionary<long, int> { [11] = 1, [12] = 101, [13] = 1, [14] = 1 };
-        var trapCell = new Dictionary<long, int> { [11] = 0, [12] = 1, [13] = 2 };
-
-        string json = PageJson.DataJson("Take All", PageJson.GroupsJson(floors, trapFloor, trapCell));
+        string json = PageJson.DataJson(new Dictionary<string, string> { ["takeAll"] = "Take All" }, PageJsonTests.FixtureGroups(), false, false);
 
         var expected = JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "fixtures", "data.json")));
         Assert.True(JsonNode.DeepEquals(expected, JsonNode.Parse(json)), json);

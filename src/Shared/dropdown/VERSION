@@ -1,0 +1,5 @@
+# Library copy of shared/dropdown. Do not edit it: edit shared/dropdown/, then run tools/shared-sync.ps1 -Mod Trapline -Lib dropdown.
+name=dropdown
+version=1.1.0
+sha256 web/dropdown.css 3d97a059c7b75a096c60471e242302a27d314f40858a8d2873ed4fb95b9c5dca
+sha256 web/dropdown.ts e9f50a28b5903c1afea82841c841737aab331774dbecd71c2f619d240836b59b

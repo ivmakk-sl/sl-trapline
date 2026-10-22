@@ -1,0 +1,41 @@
+/* The Auto-replace checkbox of the trap slot in the header of the trap window (TrapUI/TrapPanel.html), in the look of
+   Greenline's checkboxes in the windows of a pot. The header is centered, so the checkbox is on its own line under the
+   name of the trap. */
+.header > .trapline-slot-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  color: rgb(from var(--tl-white) r g b / 85%);
+}
+
+.trapline-slot-option input {
+  appearance: none;
+  flex-shrink: 0;
+  margin: 0;
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border: 1px solid rgb(from var(--tl-gold) r g b / 50%);
+  border-radius: 3px;
+  background: rgb(from var(--tl-black) r g b / 35%);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 11px 11px;
+  cursor: pointer;
+}
+
+.trapline-slot-option input:checked {
+  background-color: rgb(from var(--tl-gold) r g b / 85%);
+  border-color: rgb(from var(--tl-gold) r g b / 95%);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 5.2l2 2 4-4.4' fill='none' stroke='%23201a08' stroke-width='1.6'/%3E%3C/svg%3E");
+}
+
+@media (hover: hover) {
+  .trapline-slot-option:hover {
+    color: var(--tl-gold);
+  }
+}

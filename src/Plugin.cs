@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -8,7 +9,7 @@ using GameCore.HotUpdate.Battle.Logic;
 
 namespace Trapline
 {
-    [BepInPlugin(PluginGuid, "Trapline", "1.1.0")]
+    [BepInPlugin(PluginGuid, "Trapline", "1.2.0")]
     [BepInProcess("SurvivalLog.exe")]
     public sealed class Plugin : BasePlugin
     {
@@ -17,6 +18,7 @@ namespace Trapline
         internal static new ManualLogSource Log;
         internal static Harmony Harmony;
         internal static ConfigEntry<bool> Verbose;
+        internal static ConfigEntry<bool> PinGrid;
 
         public override void Load()
         {
@@ -24,19 +26,30 @@ namespace Trapline
             Verbose = Config.Bind(
                 "General", "Verbose", false,
                 "Log route and page-script detail at Debug level. Keep off in normal play.");
+            PinGrid = Config.Bind(
+                "General", "PinGrid", false,
+                "Keeps the HUD trap list open (the pin at the right end of the last line of the list sets this).");
             Harmony = new Harmony(PluginGuid);
             // Each patch target is attached on its own, so a target missing after a game update turns
             // off only its own feature.
             foreach (var type in new[]
                      {
-                         typeof(TakeAllOnMessageFromJS),
+                         typeof(PageOnMessageFromJS),
                          typeof(TakeAllOnPickupTrapPrey),
                          typeof(GridOnAddTrap),
                          typeof(GridOnRemoveTrap),
                          typeof(GridOnRebuildFloorButtons),
                          typeof(GridOnFloorRefreshTags),
-                         typeof(GridOnSwitchLanguage),
+                         typeof(GridOnApplyLanguageKey),
+                         typeof(GridOnLanguageApplied),
+                         typeof(GridOnPickupCagePrey),
+                         typeof(GridOnTakeTrapStoreItem),
+                         typeof(GridOnTakeAllTrapStore),
                          typeof(FramePatch),
+                         typeof(ReplaceOnRemoveTrap),
+                         typeof(ReplaceOnLoadGame),
+                         typeof(ReplaceOnTrapPanelOpen),
+                         typeof(MenuOnWorldClick),
                      })
             {
                 try { Harmony.CreateClassProcessor(type).Patch(); }
@@ -45,9 +58,18 @@ namespace Trapline
 
             Log.LogInfo("Trapline loaded.");
         }
+
+        private static readonly HashSet<string> warned = new HashSet<string>();
+
+        // Logs a warning once for each distinct text, so a failure on each click does not flood the log.
+        internal static void WarnOnce(string message)
+        {
+            if (warned.Add(message)) Log.LogWarning(message);
+        }
     }
 
-    // Runs the pending full-bag removal one frame after it was queued, then the push tick: it pushes the
+    // Runs the pending full-bag removal one frame after it was queued, then the Auto-replace of a trap that broke in the
+    // frame before, then the push tick, then the pointer check of an open Set Trap menu. The push tick pushes the
     // floor groups and the button word at most once per frame no matter how many of their triggers fired
     // in it, or checks about once each real second that the page still has the page script. ActionManager.Update(float, float) is the per-frame tick of
     // the action system itself: NativeDisasm shows BattleLogicWorld.OnUpdateAction calls it
@@ -61,7 +83,9 @@ namespace Trapline
         private static void Postfix()
         {
             TakeAllRoute.RunPendingRemoval();
+            Replace.Tick();
             TrapGroups.Tick();
+            SetTrapMenu.Tick();
         }
     }
 }

@@ -1,0 +1,6 @@
+# Library copy of shared/route. Do not edit it: edit shared/route/, then run tools/shared-sync.ps1 -Mod Trapline -Lib route.
+name=route
+version=1.0.0
+sha256 cs-game/FloorStairs.cs 76956304a3abf1d78ba7046d70d4ac81fd1f93900971a7e83bba9d03dda43239
+sha256 cs-game/WalkLength.cs 52f1e7c2c6cb3500c704a3a0412dff08136efdddc9671cf0b4f231d44b29295c
+sha256 cs/RouteOrder.cs 5b6aba19714f503d52780ff8abc71964783f40f415c5a2feb32d498d9140594d

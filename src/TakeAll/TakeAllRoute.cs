@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using GameCore.HotUpdate;
 using GameCore.HotUpdate.Battle.Logic;
+using SlShared.Route;
 using UnityEngine;
 
 namespace Trapline
@@ -135,9 +136,9 @@ namespace Trapline
                 // A slot with no node in BuildingNodeMap still gets a route entry, at the character's own
                 // position, so it sorts early on its floor rather than being skipped.
                 Vector3 pos = characterPos;
-                if (buildingNodes != null) buildingNodes.TryGetValue(trap.SlotNodeName, out pos);
+                if (buildingNodes != null && buildingNodes.TryGetValue(trap.SlotNodeName, out var node)) pos = node;
 
-                traps.Add(new RouteLogic.Trap { Id = (int)trap.InstanceId, Floor = floor, X = pos.x, Z = pos.z });
+                traps.Add(new RouteLogic.Trap { Id = (int)trap.InstanceId, Floor = floor, X = pos.x, Y = pos.y, Z = pos.z });
                 storeCounts[(int)trap.InstanceId] = storeCount;
             }
 
@@ -147,14 +148,13 @@ namespace Trapline
                 return;
             }
 
-            var floorCosts = new Dictionary<int, float>();
-            foreach (var trap in traps)
-            {
-                if (trap.Floor == characterFloor || floorCosts.ContainsKey(trap.Floor)) continue;
-                floorCosts[trap.Floor] = PlantChoreBatchManager.FloorCost(characterFloor, trap.Floor);
-            }
-
-            var route = RouteLogic.BuildRoute(traps, characterFloor, characterPos.x, characterPos.z, floorCosts);
+            // The walk lengths come from the navigation mesh, around the walls; the stairs count orders the floors. The
+            // game gives no place of the stairs of a floor, so a later floor starts from the last trap of the floor before.
+            var walk = new WalkLength(m => Plugin.WarnOnce("Trapline: " + m));
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            var route = RouteLogic.Order(traps, characterFloor, characterPos.x, characterPos.y, characterPos.z, FloorStairs.Count, walk.Of);
+            long routeMs = clock.ElapsedMilliseconds;
+            if (Plugin.Verbose.Value) Plugin.Log.LogDebug($"{WalkLine(traps, route, characterFloor, characterPos, walk)}; the route took {routeMs} ms");
             State.Start(route);
 
             if (Plugin.Verbose.Value)
@@ -177,6 +177,45 @@ namespace Trapline
                     trapManager.OnStartPickupTrapPrey(trapId);
                 }
             }
+        }
+
+        // The walk of the route on the navigation mesh, against the walk of the route that the straight distances give
+        // (the same rules on straight lines), over the same traps, in all and on the floor of the character alone (a later
+        // floor of the two routes can start from different places, and a floor change counts nothing).
+        private static string WalkLine(List<RouteLogic.Trap> traps, List<int> route, int floor, Vector3 start, WalkLength walk)
+        {
+            // The counts of the route alone: the measure of the straight-distance route below adds its own paths.
+            int paths = walk.Paths, allAreas = walk.AllAreaPaths, partial = walk.PartialPaths, fallbacks = walk.Fallbacks;
+            var straight = RouteLogic.Order(traps, floor, start.x, start.y, start.z, FloorStairs.Count);
+            var byId = new Dictionary<int, RouteLogic.Trap>();
+            foreach (var trap in traps) byId[trap.Id] = trap;
+            var (walked, walkedFirst) = Walked(route, byId, floor, start, walk);
+            var (straightWalked, straightFirst) = Walked(straight, byId, floor, start, walk);
+            return string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                "Trapline take-all: walk {0:F1} m, the straight-distance route {1:F1} m; first floor {2:F1} m, the straight-distance route {3:F1} m; paths {4}, straight fallbacks {5} (walkable areas {6}, all areas {7}, partial {8})",
+                walked, straightWalked, walkedFirst, straightFirst, paths + allAreas + partial, fallbacks,
+                paths, allAreas, partial);
+        }
+
+        // The walk of a route in all, and on the floor of the character from the character.
+        private static (double All, double First) Walked(List<int> route, Dictionary<int, RouteLogic.Trap> byId, int startFloor, Vector3 start, WalkLength walk)
+        {
+            double all = 0, first = 0;
+            var here = (start.x, start.y, start.z);
+            int floor = startFloor;
+            foreach (int id in route)
+            {
+                var trap = byId[id];
+                var place = (trap.X, trap.Y, trap.Z);
+                if (trap.Floor == floor)
+                {
+                    double length = walk.Of(here, place);
+                    all += length;
+                    if (floor == startFloor) first += length;
+                }
+                (here, floor) = (place, trap.Floor);
+            }
+            return (all, first);
         }
     }
 }

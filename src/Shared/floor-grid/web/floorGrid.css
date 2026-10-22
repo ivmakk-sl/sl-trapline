@@ -1,0 +1,74 @@
+/* Library copy of shared/floor-grid 1.0.0. Do not edit: see src/Shared/floor-grid/VERSION. */
+/* The floor lines and zone lines of a HUD grid. PFX is the prefix of the mod; floorGridCss(prefix) replaces it. The
+   mod sets these variables in its tokens.css:
+     --PFX-fg-cell         the width of a cell column
+     --PFX-fg-gap          the gap between the cells and between the lines
+     --PFX-fg-max-cols     the most cells of a line: a name does not make the grid wider than that many cells
+     --PFX-fg-floor-color  the text of a floor name
+     --PFX-fg-zone-color   the text of a zone name
+     --PFX-fg-floor-size   the text size of a floor name
+     --PFX-fg-zone-size    the text size of a zone name
+     --PFX-fg-rule         the color of the rule of a line
+     --PFX-fg-rule-width   the height of the rule; it shows at least 1px high at each scale
+   The script sets --PFX-fg-cols and --PFX-fg-tracks on the grid, and --PFX-fg-row (and --PFX-fg-col for a cell) on each placed node. */
+
+/* The cell columns (--PFX-fg-tracks, from the script). Only a line can widen the last one: a name wider than the cells
+   makes the grid wider, up to --PFX-fg-max-cols cells, and a longer name is cut. */
+.PFX-fg {
+  display: grid;
+  grid-template-columns: var(--PFX-fg-tracks);
+  gap: var(--PFX-fg-gap);
+  align-items: center;
+}
+
+.PFX-fg > [style*="--PFX-fg-col"] {
+  grid-row: var(--PFX-fg-row);
+  grid-column: var(--PFX-fg-col);
+}
+
+/* A line over the whole width: the name, the rule to the right edge, and the free place of the mod. */
+.PFX-fg-line {
+  grid-row: var(--PFX-fg-row);
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: calc(var(--PFX-fg-max-cols) * var(--PFX-fg-cell) + (var(--PFX-fg-max-cols) - 1) * var(--PFX-fg-gap));
+  line-height: 1.3;
+}
+
+.PFX-fg-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: bold;
+  color: var(--PFX-fg-floor-color);
+  font-size: var(--PFX-fg-floor-size);
+}
+
+.PFX-fg-zone > .PFX-fg-name {
+  font-weight: normal;
+  color: var(--PFX-fg-zone-color);
+  font-size: var(--PFX-fg-zone-size);
+}
+
+.PFX-fg-rule {
+  flex: 1 1 0;
+  min-width: 6px;
+  height: max(1px, var(--PFX-fg-rule-width));
+  background: var(--PFX-fg-rule);
+}
+
+.PFX-fg-end {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.PFX-fg-end:empty {
+  display: none;
+}

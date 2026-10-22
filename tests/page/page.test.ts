@@ -106,16 +106,18 @@ if (!gameFileExists) {
 
   // The last data sent to each root window, so install() and setGroups() can send it again the way
   // C# does: setData is the one call of the page script.
-  const lastData = new WeakMap<object, { words: { takeAll?: string }; groups: unknown }>();
+  const lastData = new WeakMap<object, { words: Record<string, string>; groups: unknown; replace?: boolean; pin?: boolean }>();
 
-  function setData(root: Win, data: { words: { takeAll?: string }; groups: unknown }): string {
+  function setData(root: Win, data: { words: Record<string, string>; groups: unknown; replace?: boolean; pin?: boolean }): string {
     lastData.set(root, data);
     return runPageJs(root, 'window.__trapline.setData(' + JSON.stringify(data) + ')');
   }
 
-  // Sends the last data again (no data: the default word and no groups), which applies the features
-  // once, as the next C# push does.
-  function install(root: Win): string { return setData(root, lastData.get(root) || { words: {}, groups: null }); }
+  // Sends the last data again (no data: the English word that C# sends and no groups), which applies the
+  // features once, as the next C# push does.
+  function install(root: Win): string {
+    return setData(root, lastData.get(root) || { words: { takeAll: 'Take All' }, groups: null });
+  }
 
   function wait(win: Win, ms: number): Promise<void> {
     return new Promise((resolve) => win.setTimeout(resolve, ms));
@@ -148,6 +150,28 @@ if (!gameFileExists) {
     assert.ok(btn, 'the Take All button was not added to the header row');
     assert.equal(btn.textContent, 'Take All');
     assert.ok(btn.nextElementSibling.classList.contains('trap-toggle-chevron'), 'the button must sit right before the chevron');
+  });
+
+  test('jsdom: no button before C# sent the words, then the button with the sent word', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 1)]);
+    const root = makeRootWindow(t, coreWindow);
+
+    const result = runPageJs(root, 'window.__trapline.setData({"groups":null})');
+    assert.equal(result, 'installed', `setData result was "${result}"`);
+    assert.equal(coreWindow.document.querySelector('.trapline-take-all'), null, 'a button showed before the words');
+
+    setData(root, { words: { takeAll: '全部拾取' }, groups: null });
+    assert.equal(coreWindow.document.querySelector('.trap-toggle-row .trapline-take-all')?.textContent, '全部拾取');
+  });
+
+  test('jsdom: a word that C# did not send shows its name, not an English default', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 1)]);
+    const root = makeRootWindow(t, coreWindow);
+
+    setData(root, { words: {}, groups: null });
+    assert.equal(coreWindow.document.querySelector('.trap-toggle-row .trapline-take-all')?.textContent, 'takeAll');
   });
 
   test('jsdom: a Stopped Auto Trap Cage as the only trap with prey shows the Take All button', async (t) => {
@@ -255,8 +279,8 @@ if (!gameFileExists) {
     assert.equal(result, 'installed', `expected no missing-part report while collapsed, got "${result}"`);
   });
 
-  // Sends group data through setData with the last word, the same shape C# pushes: floors in display
-  // order, a trap id -> floor id map, and a trap id -> cell index map.
+  // Sends group data through setData with the last word, the same shape C# pushes: the column and row counts, the
+  // floor lines and zone lines with their rows, and each cell with its slot, its place, and its trap.
   function setGroups(root: Win, groups: unknown): string {
     const words = (lastData.get(root) || {}).words || {};
     return setData(root, { words, groups });
@@ -268,30 +292,55 @@ if (!gameFileExists) {
   }
 
   // The grid place of one node, with spaces removed, as '<row>|<column>'. The script sets it as the
-  // custom properties --tl-row and --tl-col, which a rule of page.css reads into grid-row and grid-column.
+  // custom properties --tl-fg-row and --tl-fg-col (the floor grid library), which its rule reads into grid-row and
+  // grid-column.
   function place(el: Win): string {
     const v = (p: string) => el.style.getPropertyValue(p).replace(/\s+/g, '');
-    return v('--tl-row') + '|' + v('--tl-col');
+    return v('--tl-fg-row') + '|' + v('--tl-fg-col');
   }
 
-  // The column template of the popover: page.css reads the cell column count from --tl-cols.
+  // The cell column count of the popover.
   function columns(doc: Win): string {
-    return 'max-content repeat(' + doc.querySelector('.trap-popover').style.getPropertyValue('--tl-cols').trim() + ', 22px)';
+    return doc.querySelector('.trap-popover').style.getPropertyValue('--tl-fg-cols').trim();
   }
 
-  function emptyCells(doc: Win, floorId: number): Win[] {
-    return [...doc.querySelectorAll('.trapline-empty-cell[data-floor-id="' + floorId + '"]')];
+  function emptyCell(doc: Win, slot: string): Win {
+    return doc.querySelector('.trapline-empty-cell[data-slot="' + slot + '"]');
   }
 
-  // Home: slots 0-2, traps 1 (cell 0) and 3 (cell 2), cell 1 free. Basement: slots 0-1, trap 2 (cell 1),
-  // cell 0 free.
+  function lines(doc: Win): { name: string; kind: string; row: string }[] {
+    return [...doc.querySelectorAll('.tl-fg-line')].map((l: Win) => ({
+      name: l.querySelector('.tl-fg-name').textContent,
+      kind: l.classList.contains('tl-fg-floor') ? 'floor' : 'zone',
+      row: l.style.getPropertyValue('--tl-fg-row'),
+    }));
+  }
+
+  const cell = (slot: string, row: number, col: number, trap?: number) => (trap ? { slot, row, col, trap } : { slot, row, col });
+
+  // Home: traps 1 and 3 with the free slot h2 between them. Basement: the free slot b1, then trap 2.
   const TWO_FLOORS = {
-    floors: [{ id: 1, label: 'Home', traps: 2, slots: 3 }, { id: 2, label: 'Basement', traps: 1, slots: 2 }],
-    trapFloor: { 1: 1, 2: 2, 3: 1 },
-    trapCell: { 1: 0, 2: 1, 3: 2 }
+    cols: 3,
+    rows: 4,
+    lines: [{ key: 'f1', kind: 'floor', row: 1, name: 'Home' }, { key: 'f101', kind: 'floor', row: 3, name: 'Basement' }],
+    cells: [cell('h1', 2, 1, 1), cell('h2', 2, 2), cell('h3', 2, 3, 3), cell('b1', 4, 1), cell('b2', 4, 2, 2)],
   };
 
-  test('jsdom: rows, labels, and empty cells are placed in the grid for traps on two floors', async (t) => {
+  // The Warehouse Manager home: the floor Home with the zone lines Warehouse Interior and Outdoors, and the 2nd Floor
+  // with only its floor line.
+  const WAREHOUSE = {
+    cols: 3,
+    rows: 7,
+    lines: [
+      { key: 'f102', kind: 'floor', row: 1, name: '2nd Floor' },
+      { key: 'f1', kind: 'floor', row: 3, name: 'Home' },
+      { key: 'z1:7', kind: 'zone', row: 4, name: 'Warehouse Interior' },
+      { key: 'z1:8', kind: 'zone', row: 6, name: 'Outdoors' },
+    ],
+    cells: [cell('W2F05', 2, 1, 4), cell('W91', 5, 1, 1), cell('W92', 5, 2, 2), cell('W93', 5, 3), cell('W99', 7, 1, 3)],
+  };
+
+  test('jsdom: rows and empty cells are placed in the grid under the floor lines, from the left edge', async (t) => {
     const coreWindow = await loadCoreWindow(t);
     // All armed (status 0), so the page's own prey-first sort leaves this insertion order untouched.
     await postTraps(coreWindow, [trap(1, 0), trap(2, 0), trap(3, 0)]);
@@ -303,31 +352,90 @@ if (!gameFileExists) {
     assert.equal(result, 'installed', `setGroups result was "${result}"`);
 
     const doc = coreWindow.document;
-    assert.ok(doc.querySelector('.trap-popover').classList.contains('trapline-grid'));
+    const popover = doc.querySelector('.trap-popover');
+    assert.ok(popover.classList.contains('trapline-grid'));
+    assert.ok(popover.classList.contains('tl-fg'), 'the floor grid library draws the grid');
 
     const rows = [...doc.querySelectorAll('.trap-item-row')];
-    assert.equal(place(rows[0]), '1|2', 'trap 1: Home line, cell 0');
-    assert.equal(place(rows[1]), '2|3', 'trap 2: Basement line, cell 1');
-    assert.equal(place(rows[2]), '1|4', 'trap 3: Home line, cell 2');
+    assert.equal(place(rows[0]), '2|1', 'trap 1: the first cell under the Home line, at the left edge');
+    assert.equal(place(rows[1]), '4|2', 'trap 2: the second cell under the Basement line');
+    assert.equal(place(rows[2]), '2|3', 'trap 3: the third cell under the Home line');
 
-    const labels = [...doc.querySelectorAll('.trapline-floor-label')];
-    assert.equal(labels.length, 2);
-    const home = labels.find((l) => l.getAttribute('data-floor-id') === '1');
-    const basement = labels.find((l) => l.getAttribute('data-floor-id') === '2');
-    assert.equal(home.textContent, 'Home', 'only the floor name, no slot count');
-    assert.equal(basement.textContent, 'Basement');
-    assert.equal(columns(doc), 'max-content repeat(3, 22px)', 'as many cell columns as the longest line (Home, 3 cells)');
-    assert.equal(place(home), '1/span1|1');
-    assert.equal(place(basement), '2/span1|1');
+    assert.deepEqual(lines(doc), [{ name: 'Home', kind: 'floor', row: '1' }, { name: 'Basement', kind: 'floor', row: '3' }]);
+    assert.equal(columns(doc), '3', 'as many cell columns as the longest line');
+    assert.equal(place(emptyCell(doc, 'h2')), '2|2');
+    assert.equal(place(emptyCell(doc, 'b1')), '4|1');
+    assert.equal(doc.querySelectorAll('.trapline-empty-cell').length, 2);
+  });
 
-    const homeEmpty = emptyCells(doc, 1);
-    assert.equal(homeEmpty.length, 1);
-    assert.equal(homeEmpty[0].getAttribute('data-cell'), '1');
-    assert.equal(place(homeEmpty[0]), '1|3');
-    const basementEmpty = emptyCells(doc, 2);
-    assert.equal(basementEmpty.length, 1);
-    assert.equal(basementEmpty[0].getAttribute('data-cell'), '0');
-    assert.equal(place(basementEmpty[0]), '2|2');
+  test('jsdom: the zone lines of a floor with two zones, and only the floor line of a floor with one zone', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 0), trap(2, 0), trap(3, 0), trap(4, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+    install(root);
+    await expand(coreWindow);
+    setGroups(root, WAREHOUSE);
+
+    const doc = coreWindow.document;
+    assert.deepEqual(lines(doc), [
+      { name: '2nd Floor', kind: 'floor', row: '1' },
+      { name: 'Home', kind: 'floor', row: '3' },
+      { name: 'Warehouse Interior', kind: 'zone', row: '4' },
+      { name: 'Outdoors', kind: 'zone', row: '6' },
+    ]);
+    const rows = [...doc.querySelectorAll('.trap-item-row')];
+    assert.deepEqual(rows.map(place), ['5|1', '5|2', '7|1', '2|1']);
+    assert.equal(place(emptyCell(doc, 'W93')), '5|3');
+    for (const line of doc.querySelectorAll('.tl-fg-line')) {
+      assert.ok(line.querySelector('.tl-fg-rule'), 'each line has its rule to the right edge');
+    }
+  });
+
+  test('jsdom: the grid has no label column', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+    install(root);
+    await expand(coreWindow);
+    setGroups(root, TWO_FLOORS);
+
+    const doc = coreWindow.document;
+    assert.equal(doc.querySelector('.trapline-floor-label'), null, 'no floor label node');
+    const css = styleText(doc);
+    assert.doesNotMatch(css, /max-content/, 'no label column in the column template');
+    assert.match(css, /\.tl-fg\{[^}]*grid-template-columns:var\(--tl-fg-tracks\)/, 'the columns of the floor grid library');
+  });
+
+  test('jsdom: the lines are compact: small names and no rule', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+    install(root);
+    await expand(coreWindow);
+    setGroups(root, TWO_FLOORS);
+
+    const css = styleText(coreWindow.document);
+    assert.match(css, /--tl-fg-floor-size:7px;/, 'a 7px floor name');
+    assert.match(css, /--tl-fg-zone-size:6\.5px;/, 'a 6.5px zone name');
+    assert.match(css, /\.tl-fg-line\{[^}]*line-height:1;/, 'no extra line height');
+    assert.match(css, /\.trap-popover\.trapline-grid\.tl-fg-rule\{[^}]*display:none/, 'no rule after the name');
+  });
+
+  test('jsdom: a long Chinese name is cut and does not widen the grid past 8 cells', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+    install(root);
+    await expand(coreWindow);
+    const name = '仓库内部仓库内部仓库内部仓库内部仓库内部';
+    setGroups(root, { cols: 1, rows: 2, lines: [{ key: 'f1', kind: 'floor', row: 1, name }], cells: [cell('a', 2, 1, 1)] });
+
+    const doc = coreWindow.document;
+    assert.equal(lines(doc)[0].name, name, 'the whole name is in the node; the CSS cuts it');
+    const css = styleText(doc);
+    assert.match(css, /\.tl-fg-name\{[^}]*text-overflow:ellipsis/);
+    assert.match(css, /--tl-fg-max-cols:8;/, 'a name widens the grid to at most 8 cells');
+    assert.equal(columns(doc), '1', 'the cell columns stay as the data gives them');
   });
 
   test('jsdom: a second setGroups with the same data writes nothing to the DOM', async (t) => {
@@ -355,18 +463,33 @@ if (!gameFileExists) {
     await expand(coreWindow);
     setGroups(root, TWO_FLOORS);
 
-    // Vue update: drop trap 2 (Basement), add trap 3 (Home), with no further group data.
+    // Vue update: drop trap 2 (Basement), add trap 3 (Home); C# pushes the groups again with b2 free.
     await postTraps(coreWindow, [trap(1, 0), trap(3, 0)]);
-    install(root); // re-applies against the freshly patched rows, as the body observer would
+    setGroups(root, { ...TWO_FLOORS, cells: [cell('h1', 2, 1, 1), cell('h2', 2, 2), cell('h3', 2, 3, 3), cell('b1', 4, 1), cell('b2', 4, 2)] });
 
     const doc = coreWindow.document;
     const rows = [...doc.querySelectorAll('.trap-item-row')];
     assert.equal(rows.length, 2, 'expected exactly one row per current trap');
-    assert.equal(place(rows[0]), '1|2', 'trap 1, Home cell 0');
-    assert.equal(place(rows[1]), '1|4', 'trap 3, Home cell 2');
-    assert.deepEqual(emptyCells(doc, 1).map((c) => c.getAttribute('data-cell')), ['1']);
-    assert.deepEqual(emptyCells(doc, 2).map((c) => c.getAttribute('data-cell')).sort(), ['0', '1'], 'trap 2 is gone, so both Basement cells are free');
-    assert.equal(doc.querySelectorAll('.trapline-floor-label').length, 2, 'each label once');
+    assert.equal(place(rows[0]), '2|1', 'trap 1');
+    assert.equal(place(rows[1]), '2|3', 'trap 3');
+    assert.deepEqual([...doc.querySelectorAll('.trapline-empty-cell')].map((c: Win) => c.getAttribute('data-slot')).sort(), ['b1', 'b2', 'h2']);
+    assert.equal(doc.querySelectorAll('.tl-fg-line').length, 2, 'each line once');
+  });
+
+  test('jsdom: a new trap that the data does not have yet goes to the line after all rows', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+    install(root);
+    await expand(coreWindow);
+    // The data still has h2 free, and a new trap 5 is on it before C# pushes again.
+    setGroups(root, TWO_FLOORS);
+    await postTraps(coreWindow, [trap(1, 0), trap(5, 0)]);
+    install(root);
+
+    const doc = coreWindow.document;
+    const rows = [...doc.querySelectorAll('.trap-item-row')];
+    assert.equal(place(rows[1]), '5|1', 'trap 5 has no cell in the data, so it goes to the line after all rows');
   });
 
   test('jsdom: a collapse and a new expand keep the grid', async (t) => {
@@ -379,7 +502,7 @@ if (!gameFileExists) {
     await expand(coreWindow);
     install(root);
     let rows = [...coreWindow.document.querySelectorAll('.trap-item-row')];
-    assert.equal(place(rows[1]), '2|3');
+    assert.equal(place(rows[1]), '4|2');
 
     // Collapse: Vue's v-if destroys .trap-popover (and everything inside it) once its leave transition
     // finishes.
@@ -393,86 +516,59 @@ if (!gameFileExists) {
     const doc = coreWindow.document;
     rows = [...doc.querySelectorAll('.trap-item-row')];
     assert.equal(rows.length, 3, 'no leftover rows from before the collapse');
-    assert.equal(place(rows[1]), '2|3');
-    assert.equal(doc.querySelectorAll('.trapline-floor-label').length, 2, 'no duplicate labels');
+    assert.equal(place(rows[1]), '4|2');
+    assert.equal(doc.querySelectorAll('.tl-fg-line').length, 2, 'no duplicate lines');
     assert.equal(doc.querySelectorAll('.trapline-empty-cell').length, 2, 'no duplicate empty cells');
   });
 
-  test('jsdom: a floor with 8 cells uses two lines under one label, and the next floor starts after them', async (t) => {
-    const coreWindow = await loadCoreWindow(t);
-    await postTraps(coreWindow, [trap(1, 0), trap(2, 0), trap(3, 0)]);
-    const root = makeRootWindow(t, coreWindow);
-    install(root);
-    await expand(coreWindow);
-    setGroups(root, {
-      floors: [{ id: 1, label: 'Home', traps: 2, slots: 8 }, { id: 2, label: 'Basement', traps: 1, slots: 1 }],
-      trapFloor: { 1: 1, 2: 1, 3: 2 },
-      trapCell: { 1: 5, 2: 7, 3: 0 }
-    });
-
-    const doc = coreWindow.document;
-    const rows = [...doc.querySelectorAll('.trap-item-row')];
-    assert.equal(place(rows[0]), '1|7', 'Home cell 5: last cell of line 1');
-    assert.equal(place(rows[1]), '2|3', 'Home cell 7: second cell of line 2');
-    assert.equal(place(rows[2]), '3|2', 'Basement cell 0: first line after the two Home lines');
-    assert.equal(place(doc.querySelector('.trapline-floor-label[data-floor-id="1"]')), '1/span2|1');
-    assert.equal(place(doc.querySelector('.trapline-floor-label[data-floor-id="2"]')), '3/span1|1');
-    assert.equal(emptyCells(doc, 1).length, 6);
-    assert.equal(columns(doc), 'max-content repeat(6, 22px)', 'never more than 6 cell columns');
-    assert.equal(place(doc.querySelector('.trapline-empty-cell[data-floor-id="1"][data-cell="6"]')), '2|2');
-  });
-
-  test('jsdom: a trap with no cell goes to one line after all floors, with no label', async (t) => {
+  test('jsdom: a trap with no cell goes to one line after all rows, with no line name', async (t) => {
     const coreWindow = await loadCoreWindow(t);
     await postTraps(coreWindow, [trap(1, 0), trap(9, 0)]);
     const root = makeRootWindow(t, coreWindow);
     install(root);
     await expand(coreWindow);
-    setGroups(root, {
-      floors: [{ id: 1, label: 'Home', traps: 1, slots: 1 }],
-      trapFloor: { 1: 1 },
-      trapCell: { 1: 0 }
-    });
+    setGroups(root, { cols: 1, rows: 2, lines: [{ key: 'f1', kind: 'floor', row: 1, name: 'Home' }], cells: [cell('a', 2, 1, 1)] });
 
     const doc = coreWindow.document;
     const rows = [...doc.querySelectorAll('.trap-item-row')];
-    assert.equal(place(rows[0]), '1|2');
-    assert.equal(place(rows[1]), '2|2', 'trap 9 has no cell, so it goes to the line after Home');
-    assert.equal(doc.querySelectorAll('.trapline-floor-label').length, 1, 'no label for the extra line');
-    assert.equal(columns(doc), 'max-content repeat(1, 22px)');
+    assert.equal(place(rows[0]), '2|1');
+    assert.equal(place(rows[1]), '3|1', 'trap 9 has no cell, so it goes to the line after Home');
+    assert.equal(doc.querySelectorAll('.tl-fg-line').length, 1, 'no line for the extra line');
+    assert.equal(columns(doc), '1');
   });
 
-  test('jsdom: more than 6 traps with no cell wrap to a second extra line', async (t) => {
+  test('jsdom: more than 8 traps with no cell wrap to a second extra line', async (t) => {
     const coreWindow = await loadCoreWindow(t);
-    await postTraps(coreWindow, [1, 2, 3, 4, 5, 6, 7].map((id) => trap(id, 0)));
+    await postTraps(coreWindow, [1, 2, 3, 4, 5, 6, 7, 8, 9].map((id) => trap(id, 0)));
     const root = makeRootWindow(t, coreWindow);
     install(root);
     await expand(coreWindow);
-    setGroups(root, { floors: [], trapFloor: {}, trapCell: {} });
+    setGroups(root, { cols: 1, rows: 0, lines: [], cells: [] });
 
-    const rows = [...coreWindow.document.querySelectorAll('.trap-item-row')];
-    assert.equal(place(rows[5]), '1|7');
-    assert.equal(place(rows[6]), '2|2', 'the 7th extra trap starts a new line instead of overlapping the 1st');
+    const doc = coreWindow.document;
+    const rows = [...doc.querySelectorAll('.trap-item-row')];
+    assert.equal(place(rows[7]), '1|8');
+    assert.equal(place(rows[8]), '2|1', 'the 9th extra trap starts a new line instead of overlapping the 1st');
+    assert.equal(columns(doc), '8');
   });
 
-  test('jsdom: a floor with no trap shows its label and only empty cells', async (t) => {
+  test('jsdom: a floor with no trap shows its line and only empty cells', async (t) => {
     const coreWindow = await loadCoreWindow(t);
     await postTraps(coreWindow, [trap(1, 0)]);
     const root = makeRootWindow(t, coreWindow);
     install(root);
     await expand(coreWindow);
     setGroups(root, {
-      floors: [{ id: 1, label: 'Home', traps: 1, slots: 1 }, { id: 2, label: 'Basement', traps: 0, slots: 2 }],
-      trapFloor: { 1: 1 },
-      trapCell: { 1: 0 }
+      cols: 2,
+      rows: 4,
+      lines: [{ key: 'f1', kind: 'floor', row: 1, name: 'Home' }, { key: 'f101', kind: 'floor', row: 3, name: 'Basement' }],
+      cells: [cell('a', 2, 1, 1), cell('b1', 4, 1), cell('b2', 4, 2)],
     });
 
     const doc = coreWindow.document;
-    const basement = doc.querySelector('.trapline-floor-label[data-floor-id="2"]');
-    assert.equal(basement.textContent, 'Basement');
-    assert.equal(columns(doc), 'max-content repeat(2, 22px)', 'the Basement line of 2 empty cells is the longest');
-    assert.equal(place(basement), '2/span1|1');
-    assert.deepEqual(emptyCells(doc, 2).map(place), ['2|2', '2|3']);
+    assert.deepEqual(lines(doc)[1], { name: 'Basement', kind: 'floor', row: '3' });
+    assert.equal(columns(doc), '2');
+    assert.deepEqual([emptyCell(doc, 'b1'), emptyCell(doc, 'b2')].map(place), ['4|1', '4|2']);
   });
 
   test('jsdom: a trap row click still calls the game handler in the grid', async (t) => {
@@ -500,6 +596,8 @@ if (!gameFileExists) {
     assert.deepEqual({ ...clicks[0].data }, { instanceId: 1 });
   });
 
+  const ONE_CELL = { cols: 1, rows: 2, lines: [{ key: 'f1', kind: 'floor', row: 1, name: 'Home' }], cells: [cell('a', 2, 1, 1)] };
+
   test('jsdom: a grid row hides its room name', async (t) => {
     const coreWindow = await loadCoreWindow(t);
     await postTraps(coreWindow, [trap(1, 0, 'Balcony')]);
@@ -510,7 +608,7 @@ if (!gameFileExists) {
     const room = coreWindow.document.querySelector('.trap-item-room');
     assert.notEqual(coreWindow.getComputedStyle(room).display, 'none', 'the room name should show before the grid applies');
 
-    const result = setGroups(root, { floors: [{ id: 1, label: 'Home', traps: 1, slots: 1 }], trapFloor: { 1: 1 }, trapCell: { 1: 0 } });
+    const result = setGroups(root, ONE_CELL);
     assert.equal(result, 'installed', `setGroups result was "${result}"`);
 
     assert.equal(coreWindow.getComputedStyle(room).display, 'none', 'the room name should be hidden in the grid');
@@ -528,20 +626,21 @@ if (!gameFileExists) {
     const popover = coreWindow.document.querySelector('.trap-popover');
     popover.classList.remove('trap-popover');
 
-    const result = setGroups(root, { floors: [{ id: 1, label: 'Home', traps: 1, slots: 1 }], trapFloor: { 1: 1 }, trapCell: { 1: 0 } });
+    const result = setGroups(root, ONE_CELL);
     assert.match(result, /missing: groups\(\.trap-popover\)/, `expected a missing-part report, got "${result}"`);
 
     const row = coreWindow.document.querySelector('.trap-item-row');
     assert.equal(place(row), '|', 'no grid placement when a required groups part is missing');
     assert.ok(!popover.classList.contains('trapline-grid'), 'no grid class when a required groups part is missing');
-    assert.equal(coreWindow.document.querySelector('.trapline-floor-label'), null, 'no label when a required groups part is missing');
+    assert.equal(coreWindow.document.querySelector('.tl-fg-line'), null, 'no line when a required groups part is missing');
     assert.ok(coreWindow.document.querySelector('.trap-toggle-row .trapline-take-all'), 'the button feature must be unaffected by the groups part going missing');
   });
 
   const ONE_FLOOR_THREE = {
-    floors: [{ id: 1, label: 'Home', traps: 3, slots: 4 }],
-    trapFloor: { 1: 1, 2: 1, 3: 1 },
-    trapCell: { 1: 0, 2: 1, 3: 2 }
+    cols: 4,
+    rows: 2,
+    lines: [{ key: 'f1', kind: 'floor', row: 1, name: 'Home' }],
+    cells: [cell('a', 2, 1, 1), cell('b', 2, 2, 2), cell('c', 2, 3, 3), cell('d', 2, 4)],
   };
 
   // The rules page.js adds, as one text with spaces removed. jsdom does not lay out a grid, so the look
@@ -556,7 +655,7 @@ if (!gameFileExists) {
     const root = makeRootWindow(t, coreWindow);
     install(root);
     await expand(coreWindow);
-    setGroups(root, { floors: [{ id: 1, label: 'Home', traps: 1, slots: 1 }], trapFloor: { 1: 1 }, trapCell: { 1: 0 } });
+    setGroups(root, ONE_CELL);
 
     const doc = coreWindow.document;
     assert.equal(coreWindow.getComputedStyle(doc.querySelector('.trap-item-name')).display, 'none', 'no trap name');
@@ -656,7 +755,7 @@ if (!gameFileExists) {
     assert.equal(rowStyle.height, '22px', 'the badge does not make the cell higher');
   });
 
-  test('jsdom: an empty cell is a HUD area and a click on it posts nothing', async (t) => {
+  test('jsdom: an empty cell is a HUD area, and a click on it is no trap click', async (t) => {
     const coreWindow = await loadCoreWindow(t);
     await postTraps(coreWindow, [trap(1, 0), trap(2, 0), trap(3, 0)]);
     const root = makeRootWindow(t, coreWindow);
@@ -667,14 +766,446 @@ if (!gameFileExists) {
     const empty = coreWindow.document.querySelector('.trapline-empty-cell');
     assert.ok(empty.hasAttribute('data-interactive'), 'the HUD must count an empty cell as its own area, or the click goes to the world');
 
-    const inCore: Win[] = [], inRoot: Win[] = [];
+    const inCore: Win[] = [];
     coreWindow.addEventListener('message', (e: Win) => inCore.push(e.data));
-    root.addEventListener('message', (e: Win) => inRoot.push(e.data));
     empty.dispatchEvent(new coreWindow.MouseEvent('click', { bubbles: true }));
     await wait(coreWindow, 30);
 
     assert.equal(inCore.filter((m) => m.type === 'TRAP_HUD_CLICK').length, 0, 'no trap click');
-    assert.equal(inRoot.length, 0, 'no mod message');
+  });
+
+  test('jsdom: a trap whose next pickup breaks it shows a red danger cell over its cell', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    // Trap 1 with 4 prey in its storage box and the mark 25, trap 2 with no mark.
+    await postTraps(coreWindow, [trap(1, 1, '', 4), trap(2, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+    install(root);
+    await expand(coreWindow);
+    setGroups(root, { cols: 2, rows: 2, lines: [{ key: 'f1', kind: 'floor', row: 1, name: 'Home' }], cells: [{ slot: 'a', row: 2, col: 1, trap: 1, mark: 25 }, cell('b', 2, 2, 2)] });
+
+    const doc = coreWindow.document;
+    const marks = [...doc.querySelectorAll('.trapline-mark')];
+    assert.equal(marks.length, 1, 'only the trap with a mark has a mark node');
+    assert.equal(marks[0].textContent, '', 'no text: the cell is the mark');
+    assert.equal(marks[0].getAttribute('data-percent'), '25', 'the durability percent for the game driver');
+    assert.equal(marks[0].getAttribute('data-trap'), '1');
+    assert.equal(place(marks[0]), '2|1', 'the mark is in the cell of its trap');
+    assert.ok(!doc.querySelector('.trap-item-row').contains(marks[0]), 'the mark is not a child of the game row, so Vue keeps its row');
+
+    const css = styleText(doc);
+    const rule = css.match(/\.trap-popover\.trapline-grid\.trapline-mark\{([^}]*)\}/);
+    assert.ok(rule, 'a rule for the mark');
+    for (const decl of ['width:22px', 'height:22px', 'border:1pxsolidvar(--tl-mark)', 'border-radius:4px', 'background:rgb(fromvar(--tl-mark)rgb/16%)', 'pointer-events:none']) {
+      assert.ok(rule[1].includes(decl), `the mark rule has ${decl}`);
+    }
+    // The gold marker (top right) and the count badge (bottom right) of the row stay as they were.
+    const row = doc.querySelectorAll('.trap-item-row')[0];
+    assert.equal(coreWindow.getComputedStyle(row).width, '22px', 'the mark does not make the cell wider');
+    assert.equal(coreWindow.getComputedStyle(row.querySelector('.trap-item-count')).position, 'absolute');
+  });
+
+  test('jsdom: a mark goes when its trap has no mark in the next data, and a second draw writes nothing', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+    install(root);
+    await expand(coreWindow);
+    const marked = { cols: 1, rows: 2, lines: [], cells: [{ slot: 'a', row: 2, col: 1, trap: 1, mark: 40 }] };
+    setGroups(root, marked);
+
+    const popover = coreWindow.document.querySelector('.trap-popover');
+    const watcher = new coreWindow.MutationObserver(() => {});
+    watcher.observe(popover, { childList: true, subtree: true, attributes: true, characterData: true });
+    setGroups(root, marked);
+    assert.equal(watcher.takeRecords().length, 0, 'no write for the same mark');
+    watcher.disconnect();
+
+    setGroups(root, { cols: 1, rows: 2, lines: [], cells: [cell('a', 2, 1, 1)] });
+    assert.equal(coreWindow.document.querySelector('.trapline-mark'), null);
+  });
+
+  // The data of a trap card, as PageJson.CardJson gives it.
+  function cardData(trapId: number, over: Record<string, unknown> = {}) {
+    return {
+      trap: trapId, name: 'Live Capture Cage', cur: 600, max: 1000, fill: 60, band: '',
+      bait: true, baitIcon: '../../Res/bait.png', prey: false, preyIcon: '',
+      texts: { durability: 'Durability', baitSet: 'Bait Set', noBait: 'No Bait', preyReady: 'Ready to Take', noPrey: 'No Prey' },
+      ...over,
+    };
+  }
+
+  function setCard(root: Win, data: unknown): string {
+    return runPageJs(root, 'window.__trapline.setCard(' + JSON.stringify(data) + ')');
+  }
+
+  function enter(coreWindow: Win, el: Win): void {
+    el.dispatchEvent(new coreWindow.MouseEvent('mouseenter', { bubbles: false }));
+  }
+
+  function leave(coreWindow: Win, el: Win): void {
+    el.dispatchEvent(new coreWindow.MouseEvent('mouseleave', { bubbles: false, relatedTarget: coreWindow.document.body }));
+  }
+
+  async function gridWithCard(t: TestContext): Promise<{ coreWindow: Win; root: Win; received: Win[] }> {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 0), trap(2, 0), trap(3, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+    install(root);
+    await expand(coreWindow);
+    setGroups(root, TWO_FLOORS);
+    const received: Win[] = [];
+    root.addEventListener('message', (e: Win) => received.push(e.data));
+    return { coreWindow, root, received };
+  }
+
+  test('jsdom: the pointer on a trap cell asks for its card once, and a move on the cell asks nothing', async (t) => {
+    const { coreWindow, root, received } = await gridWithCard(t);
+    const row = coreWindow.document.querySelectorAll('.trap-item-row')[1];
+    enter(coreWindow, row);
+    row.dispatchEvent(new coreWindow.MouseEvent('mousemove', { bubbles: true }));
+    row.dispatchEvent(new coreWindow.MouseEvent('mousemove', { bubbles: true }));
+    await wait(root, 30);
+
+    const asks = received.filter((m) => m.type === 'TRAPLINE_CARD');
+    assert.equal(asks.length, 1, 'one ask for the cell under the pointer');
+    assert.deepEqual({ ...asks[0].data }, { trap: 2 });
+    assert.equal(asks[0].sourcePageId, 'CoreUI1');
+  });
+
+  test('jsdom: the card shows the content of the game card at the cell, and hides when the pointer leaves', async (t) => {
+    const { coreWindow, root } = await gridWithCard(t);
+    const doc = coreWindow.document;
+    const row = doc.querySelectorAll('.trap-item-row')[0];
+    enter(coreWindow, row);
+    assert.equal(setCard(root, cardData(1)), 'ok');
+
+    const hover = doc.querySelector('.trapline-hover');
+    assert.ok(hover && !hover.hidden, 'the card shows');
+    assert.ok(hover.hasAttribute('data-no-sync'), 'the card is not a HUD area that CoreUI1 reports to the game');
+    const tip = hover.querySelector('.entry-tip.trapline-tip');
+    assert.ok(tip, 'the frame of the game tooltip, as the pot card of Greenline');
+    assert.equal(tip.querySelector('.trapline-card-name').textContent, 'Live Capture Cage');
+    assert.equal(tip.querySelector('.trapline-card-dura-label').textContent, 'Durability');
+    assert.equal(tip.querySelector('.trapline-card-dura-value').textContent, '600 / 1000');
+    const fill = tip.querySelector('.trapline-card-fill');
+    assert.equal(fill.style.width, '60%');
+    assert.ok(!fill.classList.contains('medium') && !fill.classList.contains('low'), 'green above 0.5');
+    const items = [...tip.querySelectorAll('.trapline-card-status')];
+    assert.equal(items.length, 2);
+    assert.equal(items[0].querySelector('img').getAttribute('src'), '../../Res/bait.png');
+    assert.equal(items[0].querySelector('.trapline-card-status-text').textContent, 'Bait Set');
+    assert.ok(items[0].classList.contains('active'));
+    assert.equal(items[1].querySelector('img'), null, 'no prey icon');
+    assert.equal(items[1].querySelector('.trapline-card-placeholder').textContent, '\u{1F43E}', 'the game symbol of no prey');
+    assert.equal(items[1].querySelector('.trapline-card-status-text').textContent, 'No Prey');
+    assert.ok(!items[1].classList.contains('active'));
+
+    leave(coreWindow, row);
+    assert.ok(hover.hidden, 'the card hides when the pointer leaves the cell');
+  });
+
+  test('jsdom: a card for a cell that the pointer left already does not show', async (t) => {
+    const { coreWindow, root } = await gridWithCard(t);
+    const doc = coreWindow.document;
+    const rows = doc.querySelectorAll('.trap-item-row');
+    enter(coreWindow, rows[0]);
+    leave(coreWindow, rows[0]);
+    enter(coreWindow, rows[1]);
+    setCard(root, cardData(1));
+    const hover = doc.querySelector('.trapline-hover');
+    assert.ok(!hover || hover.hidden, 'the card of trap 1 does not show over trap 2');
+    setCard(root, cardData(2, { cur: 150, fill: 15, band: 'low' }));
+    assert.ok(!doc.querySelector('.trapline-hover').hidden);
+    assert.ok(doc.querySelector('.trapline-card-fill').classList.contains('low'), 'red at 0.2 or less');
+  });
+
+  test('jsdom: the card goes left of the cell at the right edge of the window, with the arrow on its right side', async (t) => {
+    const { coreWindow, root } = await gridWithCard(t);
+    const doc = coreWindow.document;
+    const row = doc.querySelectorAll('.trap-item-row')[0];
+    const right = coreWindow.innerWidth - 4;
+    row.getBoundingClientRect = () => ({ left: right - 22, right, top: 100, bottom: 122, width: 22, height: 22, x: right - 22, y: 100 });
+    enter(coreWindow, row);
+    setCard(root, cardData(1));
+    const hover = doc.querySelector('.trapline-hover');
+    assert.ok(hover.classList.contains('trapline-hover-left'));
+
+    const near = doc.querySelectorAll('.trap-item-row')[1];
+    near.getBoundingClientRect = () => ({ left: 10, right: 32, top: 100, bottom: 122, width: 22, height: 22, x: 10, y: 100 });
+    leave(coreWindow, row);
+    enter(coreWindow, near);
+    setCard(root, cardData(2));
+    assert.ok(!hover.classList.contains('trapline-hover-left'), 'right of the cell with room to the right');
+    // jsdom gives the card no height: its middle (its top) and the arrow are at the middle of the cell.
+    assert.equal(hover.style.top, '111px');
+    assert.equal(hover.style.left, '42px', 'the gap of 10px right of the cell');
+    assert.equal(hover.style.getPropertyValue('--tl-arrow-y'), '0px');
+  });
+
+  test('jsdom: the card takes no click and lies above the HUD panels with the arrow of the pot card of Greenline', async (t) => {
+    const { coreWindow } = await gridWithCard(t);
+    const css = styleText(coreWindow.document);
+    assert.match(css, /\.trapline-hover\.has-entry-tip\{[^}]*position:fixed[^}]*z-index:9999[^}]*pointer-events:none/);
+    assert.match(css, /\.trapline-hover::before\{[^}]*top:calc\(var\(--tl-arrow-y,50%\)-5px\)[^}]*transform:rotate\(45deg\)/);
+    assert.match(css, /\.trapline-hover\.trapline-hover-left::before\{[^}]*right:-5px/);
+    assert.match(css, /\.entry-tip\.trapline-tip\{[^}]*background:rgb\(fromvar\(--tl-tip\)rgb\/96%\)/);
+  });
+
+  const WORDS = { takeAll: 'Take All', freeSlot: 'Free trap slot', freeSlotHint: 'Click: set a trap' };
+
+  async function gridWithMenu(t: TestContext): Promise<{ coreWindow: Win; root: Win; received: Win[] }> {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 0), trap(2, 0), trap(3, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+    setData(root, { words: WORDS, groups: null });
+    await expand(coreWindow);
+    setGroups(root, TWO_FLOORS);
+    const received: Win[] = [];
+    root.addEventListener('message', (e: Win) => received.push(e.data));
+    return { coreWindow, root, received };
+  }
+
+  function setMenu(root: Win, data: unknown): string {
+    return runPageJs(root, 'window.__trapline.setMenu(' + JSON.stringify(data) + ')');
+  }
+
+  const MENU = {
+    slot: 'h2',
+    lines: [
+      { kind: 2, icon: '../../Res/cage.png', name: 'Live Capture Cage', count: 3 },
+      { kind: 4, icon: '../../Res/iron.png', name: 'Iron Animal Trap', count: 2 },
+    ],
+  };
+
+  test('jsdom: a free trap slot cell shows the plus and the card of a free trap slot, and asks C# nothing', async (t) => {
+    const { coreWindow, received } = await gridWithMenu(t);
+    const doc = coreWindow.document;
+    const empty = emptyCell(doc, 'h2');
+    enter(coreWindow, empty);
+    const hover = doc.querySelector('.trapline-hover');
+    assert.ok(hover && !hover.hidden, 'the card shows');
+    assert.equal(hover.querySelector('.trapline-card-name').textContent, 'Free trap slot');
+    assert.equal(hover.querySelector('.trapline-card-hint').textContent, 'Click: set a trap');
+    assert.equal(received.filter((m) => m.type === 'TRAPLINE_CARD').length, 0);
+    assert.match(styleText(doc), /\.trapline-empty-cell:hover::before\{[^}]*content:"\+"/, 'the plus on hover');
+    leave(coreWindow, empty);
+    assert.ok(hover.hidden);
+  });
+
+  test('jsdom: a click on a free trap slot cell asks for its Set Trap menu, which opens under the cell', async (t) => {
+    const { coreWindow, root, received } = await gridWithMenu(t);
+    const doc = coreWindow.document;
+    const empty = emptyCell(doc, 'h2');
+    empty.dispatchEvent(new coreWindow.MouseEvent('click', { bubbles: true }));
+    await wait(root, 30);
+    const asks = received.filter((m) => m.type === 'TRAPLINE_MENU');
+    assert.equal(asks.length, 1);
+    assert.deepEqual({ ...asks[0].data }, { slot: 'h2' });
+
+    assert.equal(setMenu(root, MENU), 'ok');
+    const list = doc.querySelector('.trapline-menu-anchored');
+    assert.ok(list, 'the menu shows');
+    const options = [...list.querySelectorAll('.trapline-menu-opt')];
+    assert.deepEqual(options.map((o: Win) => o.querySelector('.trapline-menu-text').textContent), ['Live Capture Cage', 'Iron Animal Trap']);
+    assert.deepEqual(options.map((o: Win) => o.querySelector('.trapline-menu-count').textContent), ['3', '2']);
+    assert.equal(options[0].querySelector('img').getAttribute('src'), '../../Res/cage.png');
+    const hover = doc.querySelector('.trapline-hover');
+    assert.ok(!hover || hover.hidden, 'the card of the cell hides while the menu is open');
+  });
+
+  test('jsdom: a line of the menu sets a trap of its kind on the slot and closes the menu', async (t) => {
+    const { coreWindow, root, received } = await gridWithMenu(t);
+    const doc = coreWindow.document;
+    emptyCell(doc, 'h2').dispatchEvent(new coreWindow.MouseEvent('click', { bubbles: true }));
+    setMenu(root, MENU);
+    (doc.querySelectorAll('.trapline-menu-opt')[1] as Win).click();
+    await wait(root, 30);
+    const sets = received.filter((m) => m.type === 'TRAPLINE_SET');
+    assert.equal(sets.length, 1);
+    assert.deepEqual({ ...sets[0].data }, { slot: 'h2', trap: 4 });
+    assert.equal(doc.querySelector('.trapline-menu-anchored'), null);
+  });
+
+  test('jsdom: with no trap no menu opens, and an open menu of another cell closes', async (t) => {
+    const { coreWindow, root } = await gridWithMenu(t);
+    const doc = coreWindow.document;
+    setMenu(root, MENU);
+    assert.ok(doc.querySelector('.trapline-menu-anchored'));
+    assert.equal(setMenu(root, { slot: 'h2', lines: [] }), 'ok');
+    assert.equal(doc.querySelector('.trapline-menu-anchored'), null);
+    assert.equal(doc.querySelectorAll('.trapline-menu-opt').length, 0);
+  });
+
+  test('jsdom: a click on a trap cell closes the menu, and the trap click works as without the menu', async (t) => {
+    const { coreWindow, root } = await gridWithMenu(t);
+    const doc = coreWindow.document;
+    emptyCell(doc, 'h2').dispatchEvent(new coreWindow.MouseEvent('click', { bubbles: true }));
+    setMenu(root, MENU);
+    const inCore: Win[] = [];
+    coreWindow.addEventListener('message', (e: Win) => inCore.push(e.data));
+    doc.querySelectorAll('.trap-item-row')[0].dispatchEvent(new coreWindow.MouseEvent('click', { bubbles: true }));
+    await wait(coreWindow, 30);
+    assert.equal(doc.querySelector('.trapline-menu-anchored'), null);
+    assert.equal(inCore.filter((m) => m.type === 'TRAP_HUD_CLICK').length, 1);
+  });
+
+  test('jsdom: the cell of the open menu shows the plus and a gold border until the menu closes', async (t) => {
+    const { coreWindow, root } = await gridWithMenu(t);
+    const doc = coreWindow.document;
+    setMenu(root, MENU);
+    assert.ok(emptyCell(doc, 'h2').classList.contains('trapline-menu-cell'));
+    assert.match(styleText(doc), /\.trapline-empty-cell\.trapline-menu-cell::before,[^{]*\{[^}]*content:"\+"/, 'the plus while the menu is open');
+    assert.match(styleText(doc), /\.trapline-empty-cell\.trapline-menu-cell\{[^}]*border-color:var\(--tl-gold\)/, 'a gold border');
+    (doc.querySelectorAll('.trapline-menu-opt')[0] as Win).click();
+    await wait(root, 30);
+    assert.ok(!emptyCell(doc, 'h2').classList.contains('trapline-menu-cell'), 'no mark after the close');
+  });
+
+  test('jsdom: the menu closes when the pointer leaves the trap list and the menu, and stays open on the way to the menu', async (t) => {
+    const { coreWindow, root } = await gridWithMenu(t);
+    const doc = coreWindow.document;
+    setMenu(root, MENU);
+    const popover = doc.querySelector('.trap-popover');
+    const list = doc.querySelector('.trapline-menu-anchored');
+    popover.dispatchEvent(new coreWindow.MouseEvent('mouseleave'));
+    list.dispatchEvent(new coreWindow.MouseEvent('mouseenter'));
+    await wait(coreWindow, 500);
+    assert.ok(doc.querySelector('.trapline-menu-anchored'), 'open: the pointer went from the list to the menu');
+    list.dispatchEvent(new coreWindow.MouseEvent('mouseleave'));
+    await wait(coreWindow, 500);
+    assert.equal(doc.querySelector('.trapline-menu-anchored'), null, 'closed: the pointer is out of both');
+    assert.ok(!emptyCell(doc, 'h2').classList.contains('trapline-menu-cell'));
+  });
+
+  test('jsdom: a menu for a slot with no free cell does not open', async (t) => {
+    const { coreWindow, root } = await gridWithMenu(t);
+    setMenu(root, { ...MENU, slot: 'gone' });
+    assert.equal(coreWindow.document.querySelector('.trapline-menu-anchored'), null);
+  });
+
+  const LAST_WORDS = { takeAll: 'Take All', autoReplace: 'Auto-replace', autoReplaceTip: 'A broken trap is replaced by a trap of the same kind from the backpack or home storage.' };
+
+  async function gridWithLastLine(t: TestContext, replace: boolean): Promise<{ coreWindow: Win; root: Win; received: Win[] }> {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 0), trap(2, 0), trap(3, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+    await expand(coreWindow);
+    setData(root, { words: LAST_WORDS, groups: TWO_FLOORS, replace });
+    const received: Win[] = [];
+    root.addEventListener('message', (e: Win) => received.push(e.data));
+    return { coreWindow, root, received };
+  }
+
+  test('jsdom: the last line of the open list has the Auto-replace checkbox with its tip, and a free place at its right end', async (t) => {
+    const { coreWindow } = await gridWithLastLine(t, false);
+    const doc = coreWindow.document;
+    const last = doc.querySelector('.trap-popover > .trapline-last');
+    assert.ok(last, 'the last line');
+    assert.equal(place(last), '5|', 'the row after the cells (4 rows)');
+    assert.equal(last.style.getPropertyValue('grid-column') || coreWindow.getComputedStyle(last).gridColumn, '1 / -1');
+    const label = last.querySelector('.trapline-replace');
+    assert.ok(label.hasAttribute('data-interactive'));
+    assert.equal(label.querySelector('.trapline-replace-text').textContent, 'Auto-replace');
+    assert.equal(label.querySelector('.entry-tip').textContent, LAST_WORDS.autoReplaceTip);
+    assert.equal(label.querySelector('input').checked, false);
+    assert.ok(last.querySelector(':scope > .trapline-last-end'), 'the free place at the right end');
+  });
+
+  test('jsdom: the checkbox follows the data, and a click posts its new state', async (t) => {
+    const { coreWindow, root, received } = await gridWithLastLine(t, true);
+    const doc = coreWindow.document;
+    const box = doc.querySelector('.trapline-replace input');
+    assert.equal(box.checked, true);
+    box.click();
+    await wait(root, 30);
+    const posts = received.filter((m) => m.type === 'TRAPLINE_REPLACE');
+    assert.equal(posts.length, 1);
+    assert.deepEqual({ ...posts[0].data }, { on: false });
+    assert.equal(coreWindow.eval('state.trapsExpanded'), true, 'the click does not close the list');
+  });
+
+  test('jsdom: the last line goes with the grid', async (t) => {
+    const { coreWindow, root } = await gridWithLastLine(t, false);
+    setGroups(root, null);
+    assert.equal(coreWindow.document.querySelector('.trapline-last'), null);
+  });
+
+  async function gridWithPin(t: TestContext, pin: boolean): Promise<{ coreWindow: Win; root: Win; received: Win[] }> {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 0), trap(2, 0), trap(3, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+    await expand(coreWindow);
+    setData(root, { words: LAST_WORDS, groups: TWO_FLOORS, replace: false, pin });
+    await wait(coreWindow, 30);
+    const received: Win[] = [];
+    root.addEventListener('message', (e: Win) => received.push(e.data));
+    return { coreWindow, root, received };
+  }
+
+  test('jsdom: the pin is at the right end of the last line, white, and an outline when not pinned', async (t) => {
+    const { coreWindow, root, received } = await gridWithPin(t, false);
+    const doc = coreWindow.document;
+    const pin = doc.querySelector('.trapline-last > .trapline-last-end > .tl-pin');
+    assert.ok(pin, 'the pin in the free place at the right end of the last line');
+    assert.ok(!pin.classList.contains('tl-pin-on'));
+    assert.match(styleText(doc), /--tl-pin-color:var\(--tl-white\)/, 'a white pin');
+    assert.match(styleText(doc), /\.trapline-last-end\{[^}]*font-size:9px/, 'a pin about the 11px of the checkbox (1.2em of 9px)');
+    assert.match(styleText(doc), /\.tl-pin\.tl-pin-on\.tl-pin-head\{fill:currentColor;?\}/, 'the head filled when pinned');
+    pin.click();
+    await wait(root, 30);
+    const posts = received.filter((m) => m.type === 'TRAPLINE_PIN');
+    assert.equal(posts.length, 1);
+    assert.deepEqual({ ...posts[0].data }, { on: true });
+    assert.equal(coreWindow.eval('state.trapsExpanded'), true, 'the click does not close the list');
+  });
+
+  test('jsdom: a pinned list stays open when the game closes it for the plant list, the search, or Escape', async (t) => {
+    const { coreWindow } = await gridWithPin(t, true);
+    const doc = coreWindow.document;
+    assert.ok(doc.querySelector('.tl-pin').classList.contains('tl-pin-on'), 'a filled pin');
+    // The handlers of the plant list header and the search toggle set the field as the game does.
+    coreWindow.eval('state.maturePlantsExpanded = true; state.searchExpanded = false; state.trapsExpanded = false');
+    assert.equal(coreWindow.eval('state.trapsExpanded'), true, 'open after the plant list opens');
+    coreWindow.eval('state.searchExpanded = true; state.trapsExpanded = false');
+    assert.equal(coreWindow.eval('state.trapsExpanded'), true, 'open after the search opens');
+    coreWindow.document.dispatchEvent(new coreWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    coreWindow.dispatchEvent(new coreWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await wait(coreWindow, 30);
+    assert.equal(coreWindow.eval('state.trapsExpanded'), true, 'open after Escape');
+    assert.ok(doc.querySelector('.trap-popover'), 'the list shows');
+  });
+
+  test('jsdom: a click on the chevron of a pinned list unpins it and the list closes', async (t) => {
+    const { coreWindow, root, received } = await gridWithPin(t, true);
+    const doc = coreWindow.document;
+    doc.querySelector('.trap-toggle-chevron').dispatchEvent(new coreWindow.MouseEvent('click', { bubbles: true }));
+    await wait(root, 30);
+    assert.deepEqual(received.filter((m) => m.type === 'TRAPLINE_PIN').map((m) => ({ ...m.data })), [{ on: false }]);
+    assert.equal(coreWindow.eval('state.trapsExpanded'), false, 'the list closes');
+  });
+
+  test('jsdom: a pinned list shows open again after the game rebuilt its frame', async (t) => {
+    const { root } = await gridWithPin(t, true);
+    const fresh = await loadCoreWindow(t);
+    await postTraps(fresh, [trap(1, 0)]);
+    root.__setCoreFrame(fresh);
+    assert.equal(fresh.eval('state.trapsExpanded'), false, 'a new frame starts closed');
+    setData(root, { words: LAST_WORDS, groups: TWO_FLOORS, replace: false, pin: true });
+    assert.equal(fresh.eval('state.trapsExpanded'), true, 'the pin opens the list');
+  });
+
+  test('jsdom: a missing chevron turns off only the pin and reports it', async (t) => {
+    const coreWindow = await loadCoreWindow(t);
+    await postTraps(coreWindow, [trap(1, 1), trap(2, 0), trap(3, 0)]);
+    const root = makeRootWindow(t, coreWindow);
+    await expand(coreWindow);
+    coreWindow.document.querySelector('.trap-toggle-chevron').classList.remove('trap-toggle-chevron');
+    const result = setData(root, { words: LAST_WORDS, groups: TWO_FLOORS, replace: false, pin: true });
+    assert.match(result, /missing: .*pin\(\.trap-toggle-chevron\)/);
+    assert.equal(coreWindow.document.querySelector('.tl-pin'), null);
+    assert.ok(coreWindow.document.querySelector('.trapline-last'), 'the last line still shows');
+    coreWindow.eval('state.trapsExpanded = false');
+    assert.equal(coreWindow.eval('state.trapsExpanded'), false, 'the list closes as without the pin');
   });
 
   for (const part of ['.trap-item-name', '.trap-item-status', '.trap-item-icon-img']) {
@@ -687,7 +1218,7 @@ if (!gameFileExists) {
 
       const doc = coreWindow.document;
       doc.querySelector(part).classList.remove(part.slice(1));
-      const result = setGroups(root, { floors: [{ id: 1, label: 'Home', traps: 1, slots: 1 }], trapFloor: { 1: 1 }, trapCell: { 1: 0 } });
+      const result = setGroups(root, ONE_CELL);
 
       assert.ok(result.includes('missing: groups(' + part + ')'), `expected a missing-part report, got "${result}"`);
       assert.ok(!doc.querySelector('.trap-popover').classList.contains('trapline-grid'), 'no grid');
@@ -715,7 +1246,7 @@ if (!gameFileExists) {
     assert.ok(popover, 'expected the leaving .trap-popover still in the DOM to check');
 
     assert.ok(popover.classList.contains('trapline-grid'), 'the grid class stays while the popover is only leaving');
-    assert.equal(place(popover.querySelectorAll('.trap-item-row')[1]), '2|3', 'the placement stays');
+    assert.equal(place(popover.querySelectorAll('.trap-item-row')[1]), '4|2', 'the placement stays');
     assert.equal(coreWindow.getComputedStyle(popover.querySelector('.trap-item-room')).display, 'none', 'the room name stays hidden');
   });
 
@@ -724,10 +1255,13 @@ if (!gameFileExists) {
     const doc = coreWindow.document;
     const popover = doc.querySelector('.trap-popover') || doc.querySelector('.trap-item-row').parentNode;
     assert.ok(!popover.classList.contains('trapline-grid'), 'no grid class');
-    assert.equal(popover.style.getPropertyValue('--tl-cols'), '', 'no column count');
+    assert.ok(!popover.classList.contains('tl-fg'), 'no class of the floor grid library');
+    assert.equal(popover.style.getPropertyValue('--tl-fg-cols'), '', 'no column count');
+    assert.equal(popover.style.getPropertyValue('--tl-fg-tracks'), '', 'no column template');
     for (const row of doc.querySelectorAll('.trap-item-row')) assert.equal(place(row), '|', 'no grid placement on a row');
-    assert.equal(doc.querySelector('.trapline-floor-label'), null, 'no label');
+    assert.equal(doc.querySelector('.tl-fg-line'), null, 'no line');
     assert.equal(doc.querySelector('.trapline-empty-cell'), null, 'no empty cell');
+    assert.equal(doc.querySelector('.trapline-mark'), null, 'no durability mark');
     const room = doc.querySelector('.trap-item-room');
     assert.notEqual(coreWindow.getComputedStyle(room).display, 'none', 'the room name shows again');
   }
@@ -800,7 +1334,7 @@ if (!gameFileExists) {
     const doc = coreWindow.document;
     assert.equal(doc.querySelector('.trap-toggle-row .trapline-take-all').textContent, 'Take All');
     assert.ok(doc.querySelector('.trap-popover').classList.contains('trapline-grid'));
-    assert.equal(place(doc.querySelectorAll('.trap-item-row')[1]), '2|3');
+    assert.equal(place(doc.querySelectorAll('.trap-item-row')[1]), '4|2');
   });
 
   test('jsdom: setData with no CoreUI1 frame schedules no retry', async (t) => {

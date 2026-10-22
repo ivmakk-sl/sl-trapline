@@ -1,0 +1,5 @@
+# Library copy of shared/json. Do not edit it: edit shared/json/, then run tools/shared-sync.ps1 -Mod Trapline -Lib json.
+name=json
+version=1.0.0
+sha256 cs/FlatJson.cs a3a49258c384f29273786273e5dc3435079555b9d75f155c3d5f8b359d397085
+sha256 cs/JsonText.cs 3ef9e2b5384997473012046fdeecad4917ac0c9b91b0b1c4efdf517277b0e1ee

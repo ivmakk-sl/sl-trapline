@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using SlShared.Route;
 
 namespace Trapline
 {
@@ -12,6 +14,7 @@ namespace Trapline
             public int Id;
             public int Floor;
             public float X;
+            public float Y;
             public float Z;
         }
 
@@ -27,83 +30,22 @@ namespace Trapline
         // A part take (the bag became full) leaves prey behind and is a failed pickup.
         public static bool PickupDone(bool preyInTrapAfter, int storeCountAfter) => !HasPrey(preyInTrapAfter, storeCountAfter);
 
-        // Orders the traps floor by floor, nearest neighbour within a floor. floorCosts is the cost
-        // from the character floor to each other floor.
-        public static List<int> BuildRoute(
-            IReadOnlyList<Trap> traps,
-            int characterFloor,
-            float characterX,
-            float characterZ,
-            IReadOnlyDictionary<int, float> floorCosts)
+        // The trap ids in the order of the Take All route, from the route library (shared/route): the floor of the
+        // character first, then each next floor by `floorCost` from the floor before, and the shortest walk on each
+        // floor by `walk` (null: the straight distance). The traps go in by id, so an equal walk goes to the lower trap
+        // id. Internal, as the library types are.
+        internal static List<int> Order(IList<Trap> traps, int characterFloor, float characterX, float characterY, float characterZ,
+            Func<int, int, int> floorCost,
+            Func<(float X, float Y, float Z), (float X, float Y, float Z), double> walk = null)
         {
-            var route = new List<int>();
-            float x = characterX, z = characterZ;
-
-            foreach (var floorGroup in OrderFloors(traps, characterFloor, floorCosts))
-            {
-                var remaining = new List<Trap>(floorGroup);
-                while (remaining.Count > 0)
-                {
-                    var nearest = Nearest(remaining, x, z);
-                    route.Add(nearest.Id);
-                    x = nearest.X;
-                    z = nearest.Z;
-                    remaining.Remove(nearest);
-                }
-            }
-
+            var byId = new List<Trap>(traps);
+            byId.Sort((a, b) => a.Id.CompareTo(b.Id));
+            var stops = new List<RouteStop>(byId.Count);
+            foreach (var trap in byId) stops.Add(new RouteStop { Floor = trap.Floor, X = trap.X, Y = trap.Y, Z = trap.Z });
+            var start = new RouteStart { Floor = characterFloor, X = characterX, Y = characterY, Z = characterZ };
+            var route = new List<int>(byId.Count);
+            foreach (int i in RouteOrder.Order(start, stops, floorCost, null, walk)) route.Add(byId[i].Id);
             return route;
-        }
-
-        // Groups the traps by floor, then orders the floors: the character floor first when it has
-        // traps, then by floor cost from the character floor (a floor missing from the table sorts
-        // after the floors that have a cost), then by floor id on equal cost.
-        private static IEnumerable<List<Trap>> OrderFloors(
-            IReadOnlyList<Trap> traps,
-            int characterFloor,
-            IReadOnlyDictionary<int, float> floorCosts)
-        {
-            var byFloor = new Dictionary<int, List<Trap>>();
-            foreach (var trap in traps)
-            {
-                if (!byFloor.TryGetValue(trap.Floor, out var list))
-                {
-                    list = new List<Trap>();
-                    byFloor[trap.Floor] = list;
-                }
-                list.Add(trap);
-            }
-
-            var floors = new List<int>(byFloor.Keys);
-            floors.Remove(characterFloor);
-            floors.Sort((a, b) =>
-            {
-                bool hasA = floorCosts.TryGetValue(a, out var costA);
-                bool hasB = floorCosts.TryGetValue(b, out var costB);
-                if (hasA != hasB) return hasA ? -1 : 1;
-                if (hasA && costA != costB) return costA.CompareTo(costB);
-                return a.CompareTo(b);
-            });
-            if (byFloor.ContainsKey(characterFloor)) floors.Insert(0, characterFloor);
-
-            foreach (var floor in floors) yield return byFloor[floor];
-        }
-
-        private static Trap Nearest(List<Trap> traps, float x, float z)
-        {
-            Trap nearest = null;
-            float bestDistSq = 0;
-            foreach (var trap in traps)
-            {
-                float dx = trap.X - x, dz = trap.Z - z;
-                float distSq = dx * dx + dz * dz;
-                if (nearest == null || distSq < bestDistSq || (distSq == bestDistSq && trap.Id < nearest.Id))
-                {
-                    nearest = trap;
-                    bestDistSq = distSq;
-                }
-            }
-            return nearest;
         }
     }
 
