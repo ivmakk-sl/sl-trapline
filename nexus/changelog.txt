@@ -1,4 +1,4 @@
-v1.2.0 - 2026-10-21
+v1.2.0 - 2026-10-22
 Added: The trap grid shows a line with each floor name, and on a floor with two zones a line with the second zone's name over its cells.
 Added: Point at a trap cell to see the game's trap card: name, durability, bait, and prey.
 Added: A trap that the next pickup will break shows a red cell.
