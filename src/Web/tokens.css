@@ -38,12 +38,8 @@
   --trapline-menu-accent: var(--tl-gold);
   --trapline-menu-menu-bg: #1d1e22;
 
-  /* The pin of the trap list (the HUD pin library, prefix tl), the lock of the game's Survival Planning cards: white
-     when off, so it draws less eye than the gold of the list; when on, a dark lock on a gold chip as in the game
-     (RogueSelect.html, .pin-btn.on). */
+  /* The pin of the trap list (the HUD pin library, prefix tl): white, so it draws less eye than the gold of the list. */
   --tl-pin-color: var(--tl-white);
-  --tl-pin-on-bg: var(--tl-gold);
-  --tl-pin-on-color: #4a3410;
 
   /* The floor lines and zone lines of the floor grid library (prefix tl). */
   --tl-fg-cell: 22px;

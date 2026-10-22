@@ -76,10 +76,10 @@ public class SaveKeyLogicTests
     }
 
     [Theory]
-    [InlineData(false, 0, false)]
+    [InlineData(false, 0, true)]
     [InlineData(true, 0, false)]
     [InlineData(true, 1, true)]
-    public void A_missing_global_key_is_off(bool has, int value, bool on)
+    public void A_missing_global_key_is_on(bool has, int value, bool on)
     {
         Assert.Equal(on, SaveKeyLogic.GlobalOn(has, value));
     }

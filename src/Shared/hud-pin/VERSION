@@ -1,5 +1,5 @@
 # Library copy of shared/hud-pin. Do not edit it: edit shared/hud-pin/, then run tools/shared-sync.ps1 -Mod Trapline -Lib hud-pin.
 name=hud-pin
-version=1.0.0
-sha256 web/hudPin.css e1b29085fe0fab00f742f719ab5d022d651d0f1696d7b06ef8b2602a0d38061f
-sha256 web/hudPin.ts fb2c3ac589a77af2169c9f88068ca2cd6f2a997ab9436b2ca00879d40d03db99
+version=2.0.0
+sha256 web/hudPin.css a2e57fb4c664c2d2b220036ca70ba391560dfdf52c89a424916a7f306cb9ea8e
+sha256 web/hudPin.ts 485911c10a2742933f6883a864f3e20813adc514e2aacc3e58d732f6b5ec8b5b

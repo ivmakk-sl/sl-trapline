@@ -1150,7 +1150,7 @@ if (!gameFileExists) {
     assert.ok(!pin.classList.contains('tl-pin-on'));
     assert.match(styleText(doc), /--tl-pin-color:var\(--tl-white\)/, 'a white pin');
     assert.match(styleText(doc), /\.trapline-last-end\{[^}]*font-size:9px/, 'a pin about the 11px of the checkbox (1.2em of 9px)');
-    assert.match(styleText(doc), /--tl-pin-on-bg:var\(--tl-gold\)/, 'a gold chip when pinned');
+    assert.match(styleText(doc), /\.tl-pin\.tl-pin-on\.tl-pin-head\{fill:currentColor;?\}/, 'the head filled when pinned');
     pin.click();
     await wait(root, 30);
     const posts = received.filter((m) => m.type === 'TRAPLINE_PIN');

@@ -1,10 +1,9 @@
-// Library copy of shared/hud-pin 1.0.0. Do not edit: see src/Shared/hud-pin/VERSION.
-// The pin of a HUD list: a pin button at a place that the mod names, in the look of the game's lock of the Survival
-// Planning cards: an open lock when the list is not pinned, and a closed lock on a chip when it is. While the list is
-// pinned, the library keeps the open field of the page state true: a watch of the page's own Vue with flush 'sync' sets
-// it back in the same tick when the game sets it to false, so Vue never renders the closed list. Each class name and CSS
-// variable comes from the prefix of the mod: the classes <prefix>-pin, -pin-on, -pin-open, and -pin-shut, and the
-// variables --<prefix>-pin-color, --<prefix>-pin-on-bg, and --<prefix>-pin-on-color (see hudPin.css).
+// Library copy of shared/hud-pin 2.0.0. Do not edit: see src/Shared/hud-pin/VERSION.
+// The pin of a HUD list: a push pin button at a place that the mod names, an outline when the list is not pinned and
+// filled when it is. While the list is pinned, the library keeps the open field of the page state true: a watch of the
+// page's own Vue with flush 'sync' sets it back in the same tick when the game sets it to false, so Vue never renders
+// the closed list. Each class name and CSS variable comes from the prefix of the mod: the classes <prefix>-pin, -pin-on,
+// and -pin-head, and the variable --<prefix>-pin-color (see hudPin.css).
 import css from './hudPin.css?inline';
 
 export interface PinOptions {
@@ -28,12 +27,9 @@ interface Keeper {
 
 const keepers = new WeakMap<object, Map<string, Keeper>>();
 
-// The lock of the game's Survival Planning cards (RogueSelect.html, .pin-btn): a body and two shackles, the open one
-// and the closed one; the CSS shows the one of the state.
-const PIN_SVG = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">'
-  + '<rect x="3" y="7" width="10" height="7" rx="1.2" fill="currentColor" stroke="none"/>'
-  + '<path class="PFX-pin-shut" d="M5 7V5a3 3 0 0 1 6 0v2"/>'
-  + '<path class="PFX-pin-open" d="M5 7V5a3 3 0 0 1 5.6-1.5"/></svg>';
+// A push pin: the head, which the CSS fills when pinned, and the needle.
+const PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">'
+  + '<path class="PFX-pin-head" d="M8 3h8l-1.5 6.5 3.5 3.5v2H6v-2l3.5-3.5z"/><path d="M12 15v6"/></svg>';
 
 // The CSS of the library with the prefix of the mod. The mod puts it between its tokens and its own rules.
 export function hudPinCss(prefix: string): string {

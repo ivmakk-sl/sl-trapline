@@ -3,7 +3,7 @@ Added: The trap grid shows a line with each floor name, and on a floor with two 
 Added: Point at a trap cell to see the game's trap card: name, durability, bait, and prey.
 Added: A trap that the next pickup will break shows a red cell.
 Added: Click an empty cell to set a trap there from a menu of the traps in your backpack and home storage.
-Added: Auto-replace (off by default): a broken trap is replaced by one of the same kind, right after the pickup. Each Trap Slot can opt out in its trap window.
+Added: Auto-replace (on by default): a broken trap is replaced by one of the same kind, right after the pickup. Each Trap Slot can opt out in its trap window.
 Added: A pin keeps the trap list open when you open the plant list or the search, or press Escape.
 Changed: Take All walks the shortest route: on each floor it takes the order with the shortest walk through all traps with prey, measured along the paths your character really walks, around walls and furniture. After your floor, it goes on to the floor that the stairs reach first from the floor before.
 Removed: Support for game versions before 1.1.18599 (the 10/13 Update). This version needs Survival Log 1.1.18599 or later.
